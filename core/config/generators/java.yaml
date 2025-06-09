@@ -1,0 +1,20 @@
+generatorName: java
+outputDir: ../../../generated/java
+additionalProperties:
+  groupId: com.huefy
+  artifactId: huefy-sdk
+  artifactVersion: "1.0.0"
+  library: okhttp-gson
+  developerName: Huefy
+  developerEmail: support@huefy.com
+  developerOrganization: Huefy
+  developerOrganizationUrl: https://huefy.com
+  scmConnection: scm:git:git://github.com/huefy/huefy-sdk-java.git
+  scmDeveloperConnection: scm:git:ssh://github.com:huefy/huefy-sdk-java.git
+  scmUrl: https://github.com/huefy/huefy-sdk-java
+  licenseName: MIT
+  licenseUrl: https://opensource.org/licenses/MIT
+  hideGenerationTimestamp: true
+  useJakartaEe: false
+  dateLibrary: java8
+  java8: true

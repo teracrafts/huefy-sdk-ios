@@ -1,0 +1,16 @@
+generatorName: typescript-fetch
+outputDir: ../../../generated/javascript
+additionalProperties:
+  npmName: "@huefy/core"
+  npmVersion: "1.0.0"
+  supportsES6: true
+  withInterfaces: true
+  typescriptThreePlus: true
+  modelPropertyNaming: camelCase
+  paramNaming: camelCase
+  enumPropertyNaming: UPPERCASE
+  stringEnums: true
+  useSingleRequestParameter: false
+  withSeparateModelsAndApi: true
+  apiPackage: api
+  modelPackage: model

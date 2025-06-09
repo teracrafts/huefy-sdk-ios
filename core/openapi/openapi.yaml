@@ -1,0 +1,454 @@
+openapi: 3.0.0
+info:
+  title: Huefy SDK API
+  version: 1.0.0
+  description: |
+    Huefy SDK API for sending templated emails via multiple email providers.
+    
+    ## Authentication
+    All endpoints require API key authentication via the `X-API-Key` header.
+    
+    ## Providers
+    Huefy supports multiple email providers with SES as the default:
+    - `ses` (Amazon SES) - Default provider
+    - `sendgrid` (SendGrid)
+    - `mailgun` (Mailgun) 
+    - `mailchimp` (Mailchimp)
+    
+    ## Rate Limits
+    - 1000 requests per minute per API key
+    - 10,000 emails per hour per API key
+    
+  contact:
+    name: Huefy Support
+    email: support@huefy.com
+    url: https://docs.huefy.com
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api/v1/sdk
+    description: Local development server
+  - url: https://api.huefy.com/api/v1/sdk
+    description: Production server
+
+security:
+  - ApiKeyAuth: []
+
+components:
+  securitySchemes:
+    ApiKeyAuth:
+      type: apiKey
+      in: header
+      name: X-API-Key
+      description: API key for authentication. Get yours from the Huefy dashboard.
+
+  schemas:
+    SendEmailRequest:
+      type: object
+      required:
+        - template_key
+        - data
+        - recipient
+      properties:
+        template_key:
+          type: string
+          description: The unique identifier for the email template
+          example: "welcome-email"
+          minLength: 1
+          maxLength: 100
+        data:
+          type: object
+          additionalProperties:
+            type: string
+          description: Template variables as key-value pairs
+          example:
+            name: "John Doe"
+            company: "Acme Corp"
+            verificationUrl: "https://app.example.com/verify/abc123"
+        recipient:
+          type: string
+          format: email
+          description: The recipient's email address
+          example: "john@example.com"
+          maxLength: 254
+        provider_type:
+          type: string
+          enum: [ses, sendgrid, mailgun, mailchimp]
+          default: ses
+          description: |
+            Email provider to use for sending (optional).
+            If not specified, defaults to 'ses' (Amazon SES).
+          example: "ses"
+
+    SendEmailResponse:
+      type: object
+      required:
+        - success
+        - message
+        - message_id
+        - provider
+      properties:
+        success:
+          type: boolean
+          description: Whether the email was sent successfully
+          example: true
+        message:
+          type: string
+          description: Human-readable status message
+          example: "Email sent successfully"
+        message_id:
+          type: string
+          description: Unique identifier for the sent email
+          example: "msg_1234567890abcdef"
+          minLength: 1
+        provider:
+          type: string
+          enum: [ses, sendgrid, mailgun, mailchimp]
+          description: The provider that was used to send the email
+          example: "ses"
+
+    ErrorResponse:
+      type: object
+      required:
+        - error
+        - code
+      properties:
+        error:
+          type: string
+          description: Human-readable error message
+          example: "Template not found"
+        code:
+          type: string
+          description: Machine-readable error code
+          example: "TEMPLATE_NOT_FOUND"
+          enum:
+            - INVALID_API_KEY
+            - TEMPLATE_NOT_FOUND
+            - INVALID_TEMPLATE_DATA
+            - INVALID_RECIPIENT
+            - PROVIDER_ERROR
+            - RATE_LIMIT_EXCEEDED
+            - INTERNAL_ERROR
+        details:
+          type: object
+          description: Additional error details (optional)
+          additionalProperties: true
+          example:
+            template_key: "welcome-email"
+            missing_variables: ["name", "company"]
+
+    ValidationError:
+      type: object
+      required:
+        - field
+        - message
+      properties:
+        field:
+          type: string
+          description: The field that failed validation
+          example: "recipient"
+        message:
+          type: string
+          description: Validation error message
+          example: "Must be a valid email address"
+        code:
+          type: string
+          description: Validation error code
+          example: "INVALID_EMAIL"
+
+paths:
+  /emails/send:
+    post:
+      summary: Send an email using a template
+      description: |
+        Sends an email using a predefined template with variable substitution.
+        
+        ## Template Variables
+        The `data` object contains key-value pairs that will be substituted into the template.
+        Variable names in templates use double curly braces: `{{variable_name}}`
+        
+        ## Provider Selection
+        If no provider is specified, Amazon SES will be used by default.
+        You can override this by setting the `provider_type` field.
+        
+        ## Rate Limiting
+        This endpoint is rate limited to 1000 requests per minute per API key.
+        
+      operationId: sendEmail
+      tags:
+        - Email
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SendEmailRequest'
+            examples:
+              basic_example:
+                summary: Basic welcome email
+                description: Send a welcome email with default SES provider
+                value:
+                  template_key: "welcome-email"
+                  data:
+                    name: "John Doe"
+                    company: "Acme Corp"
+                  recipient: "john@example.com"
+              
+              custom_provider:
+                summary: Email with custom provider
+                description: Send an email using SendGrid instead of default SES
+                value:
+                  template_key: "newsletter"
+                  data:
+                    name: "Jane Smith"
+                    unsubscribe_url: "https://app.example.com/unsubscribe/xyz789"
+                  recipient: "jane@example.com"
+                  provider_type: "sendgrid"
+              
+              password_reset:
+                summary: Password reset email
+                description: Send a password reset email with verification link
+                value:
+                  template_key: "password-reset"
+                  data:
+                    name: "Bob Wilson"
+                    reset_url: "https://app.example.com/reset/token123"
+                    expires_at: "2024-01-10 15:30:00 UTC"
+                  recipient: "bob@example.com"
+                  provider_type: "mailgun"
+
+      responses:
+        '200':
+          description: Email sent successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SendEmailResponse'
+              examples:
+                success_response:
+                  summary: Successful email send
+                  value:
+                    success: true
+                    message: "Email sent successfully"
+                    message_id: "msg_1234567890abcdef"
+                    provider: "ses"
+
+        '400':
+          description: Bad request - validation error or invalid data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                template_not_found:
+                  summary: Template not found
+                  value:
+                    error: "Template 'invalid-template' not found"
+                    code: "TEMPLATE_NOT_FOUND"
+                    details:
+                      template_key: "invalid-template"
+                
+                invalid_email:
+                  summary: Invalid email address
+                  value:
+                    error: "Invalid recipient email address"
+                    code: "INVALID_RECIPIENT"
+                    details:
+                      recipient: "invalid-email"
+                      validation_errors:
+                        - field: "recipient"
+                          message: "Must be a valid email address"
+                          code: "INVALID_EMAIL"
+                
+                missing_template_data:
+                  summary: Missing template variables
+                  value:
+                    error: "Template requires variables that were not provided"
+                    code: "INVALID_TEMPLATE_DATA"
+                    details:
+                      template_key: "welcome-email"
+                      missing_variables: ["name", "company"]
+
+        '401':
+          description: Unauthorized - invalid or missing API key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                invalid_api_key:
+                  summary: Invalid API key
+                  value:
+                    error: "Invalid API key"
+                    code: "INVALID_API_KEY"
+                
+                missing_api_key:
+                  summary: Missing API key
+                  value:
+                    error: "API key is required"
+                    code: "INVALID_API_KEY"
+
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                rate_limit:
+                  summary: Rate limit exceeded
+                  value:
+                    error: "Rate limit exceeded. Maximum 1000 requests per minute."
+                    code: "RATE_LIMIT_EXCEEDED"
+                    details:
+                      limit: 1000
+                      window: "1 minute"
+                      reset_at: "2024-01-09T10:31:00Z"
+
+        '500':
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+              examples:
+                provider_error:
+                  summary: Email provider error
+                  value:
+                    error: "Failed to send email via provider"
+                    code: "PROVIDER_ERROR"
+                    details:
+                      provider: "ses"
+                      provider_message: "Invalid sender domain"
+                
+                internal_error:
+                  summary: Internal server error
+                  value:
+                    error: "An internal error occurred"
+                    code: "INTERNAL_ERROR"
+
+  /health:
+    get:
+      summary: Health check endpoint
+      description: Returns the health status of the API
+      operationId: healthCheck
+      tags:
+        - Health
+      security: []  # No authentication required
+      responses:
+        '200':
+          description: Service is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "healthy"
+                  timestamp:
+                    type: string
+                    format: date-time
+                    example: "2024-01-09T10:30:00Z"
+                  version:
+                    type: string
+                    example: "1.0.0"
+
+tags:
+  - name: Email
+    description: Email sending operations
+  - name: Health
+    description: Health check operations
+
+x-code-samples:
+  - lang: JavaScript
+    source: |
+      import { HuefyClient } from '@huefy/sdk';
+
+      const huefy = new HuefyClient({
+        apiKey: 'your-api-key'
+      });
+
+      const result = await huefy.sendEmail('welcome-email', {
+        name: 'John Doe',
+        company: 'Acme Corp'
+      }, 'john@example.com');
+
+      console.log('Email sent:', result.messageId);
+
+  - lang: Go
+    source: |
+      package main
+
+      import (
+          "fmt"
+          "github.com/huefy/huefy-sdk-go"
+      )
+
+      func main() {
+          client := huefy.NewClient("your-api-key")
+          
+          data := map[string]string{
+              "name": "John Doe",
+              "company": "Acme Corp",
+          }
+          
+          resp, err := client.SendEmail("welcome-email", data, "john@example.com")
+          if err != nil {
+              panic(err)
+          }
+          
+          fmt.Printf("Email sent: %s\n", resp.MessageID)
+      }
+
+  - lang: Python
+    source: |
+      from huefy import HuefyClient
+
+      huefy = HuefyClient(api_key="your-api-key")
+
+      result = huefy.send_email(
+          template_key="welcome-email",
+          data={
+              "name": "John Doe",
+              "company": "Acme Corp"
+          },
+          recipient="john@example.com"
+      )
+
+      print(f"Email sent: {result['message_id']}")
+
+  - lang: Java
+    source: |
+      import com.huefy.HuefyClient;
+      import java.util.Map;
+
+      public class Example {
+          public static void main(String[] args) {
+              HuefyClient huefy = new HuefyClient("your-api-key");
+              
+              Map<String, String> data = Map.of(
+                  "name", "John Doe",
+                  "company", "Acme Corp"
+              );
+              
+              String messageId = huefy.sendEmail("welcome-email", data, "john@example.com");
+              System.out.println("Email sent: " + messageId);
+          }
+      }
+
+  - lang: PHP
+    source: |
+      <?php
+      use Huefy\SDK\HuefyClient;
+
+      $huefy = new HuefyClient('your-api-key');
+
+      $result = $huefy->sendEmail('welcome-email', [
+          'name' => 'John Doe',
+          'company' => 'Acme Corp'
+      ], 'john@example.com');
+
+      echo "Email sent: " . $result['message_id'];

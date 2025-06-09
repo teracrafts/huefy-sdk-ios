@@ -1,0 +1,14 @@
+generatorName: php
+outputDir: ../../../generated/php
+additionalProperties:
+  packageName: Huefy\\SDK
+  composerVendorName: huefy
+  composerProjectName: huefy-sdk
+  gitUserId: huefy
+  gitRepoId: huefy-sdk-php
+  hideGenerationTimestamp: true
+  packageVersion: "1.0.0"
+  invokerPackage: Huefy\\SDK
+  modelPackage: Huefy\\SDK\\Model
+  apiPackage: Huefy\\SDK\\Api
+  srcBasePath: src

@@ -1,0 +1,14 @@
+generatorName: python
+outputDir: ../../../generated/python
+additionalProperties:
+  packageName: huefy
+  projectName: huefy-sdk
+  packageVersion: "1.0.0"
+  packageUrl: https://github.com/huefy/huefy-sdk-python
+  developerName: Huefy
+  developerEmail: support@huefy.com
+  authorName: Huefy
+  authorEmail: support@huefy.com
+  hideGenerationTimestamp: true
+  generateSourceCodeOnly: false
+  library: urllib3

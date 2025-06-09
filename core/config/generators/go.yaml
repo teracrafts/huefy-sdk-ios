@@ -1,0 +1,11 @@
+generatorName: go
+outputDir: ../../../generated/go
+additionalProperties:
+  packageName: huefy
+  packageVersion: "1.0.0"
+  gitUserId: huefy
+  gitRepoId: huefy-sdk-go
+  moduleName: github.com/huefy/huefy-sdk-go
+  enumClassPrefix: true
+  structPrefix: true
+  withGoMod: true
