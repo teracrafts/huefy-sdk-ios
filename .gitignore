@@ -94,3 +94,6 @@ logs
 # Temporary files
 tmp/
 temp/
+
+# OpenAPI Generator
+openapitools.json

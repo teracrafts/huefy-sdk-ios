@@ -48,96 +48,264 @@ components:
     SendEmailRequest:
       type: object
       required:
-        - template_key
+        - templateKey
         - data
         - recipient
       properties:
-        template_key:
+        templateKey:
           type: string
           description: The unique identifier for the email template
           example: "welcome-email"
           minLength: 1
           maxLength: 100
+        templateVersion:
+          type: integer
+          description: Optional specific version of the template to use
+          example: 1
         data:
           type: object
-          additionalProperties:
-            type: string
+          additionalProperties: true
           description: Template variables as key-value pairs
           example:
             name: "John Doe"
             company: "Acme Corp"
             verificationUrl: "https://app.example.com/verify/abc123"
         recipient:
+          $ref: '#/components/schemas/EmailRecipient'
+        fromEmail:
+          type: string
+          format: email
+          description: Optional custom sender email address
+          example: "noreply@yourcompany.com"
+        fromName:
+          type: string
+          description: Optional sender display name
+          example: "Your Company"
+        replyTo:
+          type: string
+          format: email
+          description: Optional reply-to email address
+          example: "support@yourcompany.com"
+        providerType:
+          type: string
+          enum: [ses, sendgrid, mailgun, mailchimp]
+          description: |
+            Email provider to use for sending (optional).
+            If not specified, defaults to 'ses' (Amazon SES).
+          example: "sendgrid"
+        correlationId:
+          type: string
+          description: Optional correlation ID for request tracking
+          example: "req_1234567890abcdef"
+        metadata:
+          type: object
+          additionalProperties: true
+          description: Optional metadata for the email
+          example:
+            campaign: "onboarding"
+            source: "website"
+
+    EmailRecipient:
+      type: object
+      required:
+        - email
+        - type
+      properties:
+        email:
           type: string
           format: email
           description: The recipient's email address
           example: "john@example.com"
           maxLength: 254
-        provider_type:
+        type:
           type: string
-          enum: [ses, sendgrid, mailgun, mailchimp]
-          default: ses
-          description: |
-            Email provider to use for sending (optional).
-            If not specified, defaults to 'ses' (Amazon SES).
-          example: "ses"
+          enum: [to, cc, bcc]
+          default: to
+          description: Type of recipient
+          example: "to"
+        data:
+          type: object
+          additionalProperties: true
+          description: Recipient-specific template data
+          example:
+            firstName: "John"
 
     SendEmailResponse:
       type: object
       required:
         - success
-        - message
-        - message_id
-        - provider
+        - data
+        - correlationId
       properties:
         success:
           type: boolean
           description: Whether the email was sent successfully
           example: true
-        message:
+        data:
+          $ref: '#/components/schemas/EmailResponseData'
+        correlationId:
           type: string
-          description: Human-readable status message
-          example: "Email sent successfully"
-        message_id:
+          description: Correlation ID for request tracking
+          example: "req_1234567890abcdef"
+
+    EmailResponseData:
+      type: object
+      required:
+        - emailId
+        - status
+        - recipients
+      properties:
+        emailId:
           type: string
-          description: Unique identifier for the sent email
+          description: Unique identifier for the email
+          example: "email_1234567890abcdef"
+        status:
+          type: string
+          description: Status of the email
+          example: "sent"
+        recipients:
+          type: array
+          items:
+            $ref: '#/components/schemas/RecipientStatus'
+          description: Status of each recipient
+        scheduledAt:
+          type: string
+          format: date-time
+          description: When the email was scheduled (if applicable)
+          example: "2024-01-01T12:00:00Z"
+        sentAt:
+          type: string
+          format: date-time
+          description: When the email was sent
+          example: "2024-01-01T12:00:00Z"
+
+    RecipientStatus:
+      type: object
+      required:
+        - email
+        - status
+      properties:
+        email:
+          type: string
+          format: email
+          description: Recipient email address
+          example: "john@example.com"
+        status:
+          type: string
+          description: Status for this recipient
+          example: "sent"
+        messageId:
+          type: string
+          description: Provider-specific message ID
           example: "msg_1234567890abcdef"
-          minLength: 1
-        provider:
+        error:
           type: string
-          enum: [ses, sendgrid, mailgun, mailchimp]
-          description: The provider that was used to send the email
-          example: "ses"
+          description: Error message if delivery failed
+          example: "Invalid email address"
+        sentAt:
+          type: string
+          format: date-time
+          description: When the email was sent to this recipient
+          example: "2024-01-01T12:00:00Z"
 
     ErrorResponse:
       type: object
       required:
+        - success
         - error
-        - code
+        - correlationId
       properties:
+        success:
+          type: boolean
+          description: Always false for error responses
+          example: false
         error:
+          $ref: '#/components/schemas/ApiError'
+        correlationId:
           type: string
-          description: Human-readable error message
-          example: "Template not found"
+          description: Correlation ID for request tracking
+          example: "req_1234567890abcdef"
+
+    ApiError:
+      type: object
+      required:
+        - code
+        - message
+      properties:
         code:
           type: string
           description: Machine-readable error code
           example: "TEMPLATE_NOT_FOUND"
           enum:
-            - INVALID_API_KEY
+            - API_KEY_REQUIRED
+            - API_KEY_INVALID
+            - API_KEY_EXPIRED
+            - API_KEY_SUSPENDED
             - TEMPLATE_NOT_FOUND
+            - TEMPLATE_NOT_PUBLISHED
             - INVALID_TEMPLATE_DATA
-            - INVALID_RECIPIENT
-            - PROVIDER_ERROR
+            - INVALID_EMAIL
+            - EMAIL_SUPPRESSED
+            - PROVIDER_UNAVAILABLE
+            - SEND_FAILED
+            - INVALID_REQUEST
             - RATE_LIMIT_EXCEEDED
             - INTERNAL_ERROR
+        message:
+          type: string
+          description: Human-readable error message
+          example: "Template 'welcome-email' not found"
         details:
           type: object
-          description: Additional error details (optional)
+          description: Additional error details
           additionalProperties: true
           example:
-            template_key: "welcome-email"
-            missing_variables: ["name", "company"]
+            templateKey: "welcome-email"
+            availableTemplates: ["onboarding", "welcome"]
+        timestamp:
+          type: string
+          format: date-time
+          description: When the error occurred
+          example: "2024-01-01T12:00:00Z"
+
+    HealthResponse:
+      type: object
+      required:
+        - success
+        - data
+        - correlationId
+      properties:
+        success:
+          type: boolean
+          description: Always true for health responses
+          example: true
+        data:
+          $ref: '#/components/schemas/HealthData'
+        correlationId:
+          type: string
+          description: Correlation ID for request tracking
+          example: "health_001"
+
+    HealthData:
+      type: object
+      required:
+        - status
+        - timestamp
+        - version
+      properties:
+        status:
+          type: string
+          description: Health status of the service
+          example: "healthy"
+        timestamp:
+          type: string
+          format: date-time
+          description: Current server timestamp
+          example: "2024-01-01T12:00:00Z"
+        version:
+          type: string
+          description: API version
+          example: "1.0.0"
 
     ValidationError:
       type: object
@@ -190,34 +358,45 @@ paths:
                 summary: Basic welcome email
                 description: Send a welcome email with default SES provider
                 value:
-                  template_key: "welcome-email"
+                  templateKey: "welcome-email"
                   data:
                     name: "John Doe"
                     company: "Acme Corp"
-                  recipient: "john@example.com"
+                  recipient:
+                    email: "john@example.com"
+                    type: "to"
+                  correlationId: "req_welcome_001"
               
               custom_provider:
                 summary: Email with custom provider
                 description: Send an email using SendGrid instead of default SES
                 value:
-                  template_key: "newsletter"
+                  templateKey: "newsletter"
                   data:
                     name: "Jane Smith"
                     unsubscribe_url: "https://app.example.com/unsubscribe/xyz789"
-                  recipient: "jane@example.com"
-                  provider_type: "sendgrid"
+                  recipient:
+                    email: "jane@example.com"
+                    type: "to"
+                  providerType: "sendgrid"
+                  correlationId: "req_newsletter_001"
               
               password_reset:
                 summary: Password reset email
                 description: Send a password reset email with verification link
                 value:
-                  template_key: "password-reset"
+                  templateKey: "password-reset"
                   data:
                     name: "Bob Wilson"
                     reset_url: "https://app.example.com/reset/token123"
                     expires_at: "2024-01-10 15:30:00 UTC"
-                  recipient: "bob@example.com"
-                  provider_type: "mailgun"
+                  recipient:
+                    email: "bob@example.com"
+                    type: "to"
+                  providerType: "mailgun"
+                  fromEmail: "noreply@yourcompany.com"
+                  fromName: "Your Company"
+                  correlationId: "req_reset_001"
 
       responses:
         '200':
@@ -231,9 +410,16 @@ paths:
                   summary: Successful email send
                   value:
                     success: true
-                    message: "Email sent successfully"
-                    message_id: "msg_1234567890abcdef"
-                    provider: "ses"
+                    data:
+                      emailId: "email_1234567890abcdef"
+                      status: "sent"
+                      recipients:
+                        - email: "john@example.com"
+                          status: "sent"
+                          messageId: "msg_1234567890abcdef"
+                          sentAt: "2024-01-01T12:00:00Z"
+                      sentAt: "2024-01-01T12:00:00Z"
+                    correlationId: "req_welcome_001"
 
         '400':
           description: Bad request - validation error or invalid data
@@ -245,31 +431,40 @@ paths:
                 template_not_found:
                   summary: Template not found
                   value:
-                    error: "Template 'invalid-template' not found"
-                    code: "TEMPLATE_NOT_FOUND"
-                    details:
-                      template_key: "invalid-template"
+                    success: false
+                    error:
+                      code: "TEMPLATE_NOT_FOUND"
+                      message: "Template 'invalid-template' not found"
+                      details:
+                        templateKey: "invalid-template"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_error_001"
                 
                 invalid_email:
                   summary: Invalid email address
                   value:
-                    error: "Invalid recipient email address"
-                    code: "INVALID_RECIPIENT"
-                    details:
-                      recipient: "invalid-email"
-                      validation_errors:
-                        - field: "recipient"
-                          message: "Must be a valid email address"
-                          code: "INVALID_EMAIL"
+                    success: false
+                    error:
+                      code: "INVALID_EMAIL"
+                      message: "Invalid recipient email address"
+                      details:
+                        recipient: "invalid-email"
+                        field: "recipient.email"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_error_002"
                 
                 missing_template_data:
                   summary: Missing template variables
                   value:
-                    error: "Template requires variables that were not provided"
-                    code: "INVALID_TEMPLATE_DATA"
-                    details:
-                      template_key: "welcome-email"
-                      missing_variables: ["name", "company"]
+                    success: false
+                    error:
+                      code: "INVALID_TEMPLATE_DATA"
+                      message: "Template requires variables that were not provided"
+                      details:
+                        templateKey: "welcome-email"
+                        missingVariables: ["name", "company"]
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_error_003"
 
         '401':
           description: Unauthorized - invalid or missing API key
@@ -281,14 +476,22 @@ paths:
                 invalid_api_key:
                   summary: Invalid API key
                   value:
-                    error: "Invalid API key"
-                    code: "INVALID_API_KEY"
+                    success: false
+                    error:
+                      code: "API_KEY_INVALID"
+                      message: "Invalid API key provided"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_auth_001"
                 
                 missing_api_key:
                   summary: Missing API key
                   value:
-                    error: "API key is required"
-                    code: "INVALID_API_KEY"
+                    success: false
+                    error:
+                      code: "API_KEY_REQUIRED"
+                      message: "API key is required"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_auth_002"
 
         '429':
           description: Rate limit exceeded
@@ -300,12 +503,16 @@ paths:
                 rate_limit:
                   summary: Rate limit exceeded
                   value:
-                    error: "Rate limit exceeded. Maximum 1000 requests per minute."
-                    code: "RATE_LIMIT_EXCEEDED"
-                    details:
-                      limit: 1000
-                      window: "1 minute"
-                      reset_at: "2024-01-09T10:31:00Z"
+                    success: false
+                    error:
+                      code: "RATE_LIMIT_EXCEEDED"
+                      message: "Rate limit exceeded. Maximum 1000 requests per minute."
+                      details:
+                        limit: 1000
+                        window: "1 minute"
+                        resetAt: "2024-01-09T10:31:00Z"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_rate_001"
 
         '500':
           description: Internal server error
@@ -317,17 +524,25 @@ paths:
                 provider_error:
                   summary: Email provider error
                   value:
-                    error: "Failed to send email via provider"
-                    code: "PROVIDER_ERROR"
-                    details:
-                      provider: "ses"
-                      provider_message: "Invalid sender domain"
+                    success: false
+                    error:
+                      code: "PROVIDER_UNAVAILABLE"
+                      message: "Failed to send email via provider"
+                      details:
+                        provider: "ses"
+                        providerMessage: "Invalid sender domain"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_provider_001"
                 
                 internal_error:
                   summary: Internal server error
                   value:
-                    error: "An internal error occurred"
-                    code: "INTERNAL_ERROR"
+                    success: false
+                    error:
+                      code: "INTERNAL_ERROR"
+                      message: "An internal error occurred"
+                      timestamp: "2024-01-01T12:00:00Z"
+                    correlationId: "req_internal_001"
 
   /health:
     get:
@@ -343,18 +558,17 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  status:
-                    type: string
-                    example: "healthy"
-                  timestamp:
-                    type: string
-                    format: date-time
-                    example: "2024-01-09T10:30:00Z"
-                  version:
-                    type: string
-                    example: "1.0.0"
+                $ref: '#/components/schemas/HealthResponse'
+              examples:
+                healthy:
+                  summary: Service is healthy
+                  value:
+                    success: true
+                    data:
+                      status: "healthy"
+                      timestamp: "2024-01-01T12:00:00Z"
+                      version: "1.0.0"
+                    correlationId: "health_001"
 
 tags:
   - name: Email
