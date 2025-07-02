@@ -294,6 +294,27 @@ tasks:
     cmds:
       - composer pre-commit
 
+  # Deployment tasks for standalone repositories
+  deploy-php:
+    desc: "Deploy PHP SDK to standalone repository (usage: task deploy-php VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-php VERSION=1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-php-subtree.sh {{.VERSION}}"
+
+  deploy-java:
+    desc: "Deploy Java SDK to standalone repository (usage: task deploy-java VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-java VERSION=1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-java-subtree.sh {{.VERSION}}"
+
   #  status:
 #    desc: "Show project status and health"
 #    cmds:

@@ -8,6 +8,14 @@ Huefy SDK provides production-ready libraries for App Mail Templates across mult
 
 **🚀 All SDKs are complete and ready for production use!**
 
+### Repository Structure
+
+This monorepo contains the source code for all Huefy SDKs. Some SDKs are also published to dedicated repositories for package manager compatibility:
+
+- **PHP SDK**: [teracrafts/teracrafts-huefy-sdk-php](https://github.com/teracrafts/teracrafts-huefy-sdk-php) (for Packagist)
+- **Java SDK**: [teracrafts/teracrafts-huefy-sdk-java](https://github.com/teracrafts/teracrafts-huefy-sdk-java) (for Maven Central)
+- **Other SDKs**: Available directly from this monorepo
+
 ### Key Capabilities
 - **Template-based emails** with dynamic data substitution
 - **Multiple email providers** (SES, SendGrid, Mailgun, Mailchimp)
@@ -23,9 +31,9 @@ Huefy SDK provides production-ready libraries for App Mail Templates across mult
 | JavaScript/Node.js | [@teracrafts/huefy](./sdks/javascript/) | `npm install @teracrafts/huefy` | ✅ **Complete** |
 | React | [@teracrafts/huefy-react](./sdks/react/) | `npm install @teracrafts/huefy-react` | ✅ **Complete** |
 | Go | [github.com/teracrafts/huefy-sdk/go](./sdks/go/) | `go get github.com/teracrafts/huefy-sdk/go` | ✅ **Complete** |
-| Java | [com.teracrafts:huefy](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
+| Java | [com.teracrafts:huefy](https://github.com/teracrafts/teracrafts-huefy-sdk-java) | Maven/Gradle | ✅ **Complete** |
 | Python | [teracrafts-huefy](./sdks/python/) | `pip install teracrafts-huefy` | ✅ **Complete** |
-| PHP | [teracrafts/huefy](./sdks/php/) | `composer require teracrafts/huefy` | ✅ **Complete** |
+| PHP | [teracrafts/huefy](https://github.com/teracrafts/teracrafts-huefy-sdk-php) | `composer require teracrafts/huefy` | ✅ **Complete** |
 
 ## Quick Start
 
