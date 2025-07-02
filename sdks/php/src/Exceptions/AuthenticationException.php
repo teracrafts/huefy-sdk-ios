@@ -88,7 +88,7 @@ class AuthenticationException extends HuefyException
             code: 403,
             context: [
                 'operation' => $operation,
-                'suggestion' => 'Please check your API key permissions'
+                'suggestion' => 'Please check your API key permissions',
             ]
         );
     }

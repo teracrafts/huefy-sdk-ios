@@ -135,7 +135,7 @@ class SendEmailRequestTest extends TestCase
             'templateKey' => 'welcome-email',
             'recipient' => 'test@example.com',
             'data' => ['name' => 'John Doe'],
-            'provider' => 'sendgrid'
+            'provider' => 'sendgrid',
         ], $array);
     }
 
@@ -153,7 +153,7 @@ class SendEmailRequestTest extends TestCase
             'templateKey' => 'welcome-email',
             'recipient' => 'test@example.com',
             'data' => ['name' => 'John Doe'],
-            'provider' => null
+            'provider' => null,
         ], $array);
     }
 
@@ -163,7 +163,7 @@ class SendEmailRequestTest extends TestCase
             'templateKey' => 'welcome-email',
             'recipient' => 'test@example.com',
             'data' => ['name' => 'John Doe'],
-            'provider' => 'sendgrid'
+            'provider' => 'sendgrid',
         ];
 
         $request = SendEmailRequest::fromArray($data);
@@ -178,7 +178,7 @@ class SendEmailRequestTest extends TestCase
     {
         $data = [
             'recipient' => 'test@example.com',
-            'data' => ['name' => 'John Doe']
+            'data' => ['name' => 'John Doe'],
         ];
 
         $this->expectException(\InvalidArgumentException::class);
@@ -193,7 +193,7 @@ class SendEmailRequestTest extends TestCase
             'templateKey' => 'welcome-email',
             'recipient' => 'test@example.com',
             'data' => ['name' => 'John Doe'],
-            'provider' => 'invalid-provider'
+            'provider' => 'invalid-provider',
         ];
 
         $request = SendEmailRequest::fromArray($data);

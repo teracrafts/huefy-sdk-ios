@@ -9,7 +9,6 @@ use GuzzleHttp\Exception\GuzzleException;
 use GuzzleHttp\Exception\RequestException;
 use GuzzleHttp\RequestOptions;
 use Huefy\SDK\Config\HuefyConfig;
-use Huefy\SDK\Exceptions\AuthenticationException;
 use Huefy\SDK\Exceptions\HuefyException;
 use Huefy\SDK\Exceptions\NetworkException;
 use Huefy\SDK\Exceptions\TimeoutException;
@@ -149,7 +148,7 @@ class HuefyClient
         }
 
         $payload = [
-            'emails' => array_map(fn(SendEmailRequest $req) => $req->toArray(), $requests)
+            'emails' => array_map(fn (SendEmailRequest $req) => $req->toArray(), $requests),
         ];
 
         $responseData = $this->makeRequest(
@@ -255,7 +254,7 @@ class HuefyClient
                 'error' => [
                     'code' => 'HTTP_' . $statusCode,
                     'message' => $body ?: 'HTTP ' . $statusCode,
-                ]
+                ],
             ];
         }
 

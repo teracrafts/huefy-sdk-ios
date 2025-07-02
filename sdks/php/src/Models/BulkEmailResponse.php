@@ -134,7 +134,7 @@ class BulkEmailResponse
     {
         return array_filter(
             $this->results,
-            fn(array $result) => ($result['status'] ?? '') === 'sent'
+            fn (array $result) => ($result['status'] ?? '') === 'sent'
         );
     }
 
@@ -147,7 +147,7 @@ class BulkEmailResponse
     {
         return array_filter(
             $this->results,
-            fn(array $result) => ($result['status'] ?? '') !== 'sent'
+            fn (array $result) => ($result['status'] ?? '') !== 'sent'
         );
     }
 

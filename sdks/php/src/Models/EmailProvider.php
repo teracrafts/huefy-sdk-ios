@@ -27,7 +27,7 @@ enum EmailProvider: string
      */
     public static function getAll(): array
     {
-        return array_map(fn(self $provider) => $provider->value, self::cases());
+        return array_map(fn (self $provider) => $provider->value, self::cases());
     }
 
     /**

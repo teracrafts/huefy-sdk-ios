@@ -32,10 +32,10 @@ class HuefyClientTest extends TestCase
     {
         $this->mockHandler = new MockHandler();
         $handlerStack = HandlerStack::create($this->mockHandler);
-        
+
         $config = new HuefyConfig();
         $this->client = new HuefyClient('test-api-key', $config);
-        
+
         // Use reflection to replace the HTTP client with our mock
         $reflection = new \ReflectionClass($this->client);
         $property = $reflection->getProperty('httpClient');
@@ -48,7 +48,7 @@ class HuefyClientTest extends TestCase
         $responseData = [
             'messageId' => 'msg_test123',
             'provider' => 'sendgrid',
-            'status' => 'sent'
+            'status' => 'sent',
         ];
 
         $this->mockHandler->append(
@@ -89,8 +89,8 @@ class HuefyClientTest extends TestCase
         $errorResponse = [
             'error' => [
                 'code' => 'INVALID_API_KEY',
-                'message' => 'Invalid API key provided'
-            ]
+                'message' => 'Invalid API key provided',
+            ],
         ];
 
         $this->mockHandler->append(
@@ -117,8 +117,8 @@ class HuefyClientTest extends TestCase
             'failedEmails' => 0,
             'results' => [
                 ['messageId' => 'msg_1', 'provider' => 'sendgrid', 'status' => 'sent'],
-                ['messageId' => 'msg_2', 'provider' => 'sendgrid', 'status' => 'sent']
-            ]
+                ['messageId' => 'msg_2', 'provider' => 'sendgrid', 'status' => 'sent'],
+            ],
         ];
 
         $this->mockHandler->append(
@@ -127,7 +127,7 @@ class HuefyClientTest extends TestCase
 
         $requests = [
             new SendEmailRequest('welcome-email', 'user1@example.com', ['name' => 'User 1']),
-            new SendEmailRequest('welcome-email', 'user2@example.com', ['name' => 'User 2'])
+            new SendEmailRequest('welcome-email', 'user2@example.com', ['name' => 'User 2']),
         ];
 
         $response = $this->client->sendBulkEmails($requests);
@@ -144,7 +144,7 @@ class HuefyClientTest extends TestCase
             'status' => 'healthy',
             'version' => '1.0.0',
             'uptime' => 86400,
-            'timestamp' => '2024-01-01T12:00:00Z'
+            'timestamp' => '2024-01-01T12:00:00Z',
         ];
 
         $this->mockHandler->append(

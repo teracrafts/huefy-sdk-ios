@@ -64,7 +64,7 @@ class ExceptionFactory
                 previous: $previous,
                 errorCode: $errorCode ?: 'RATE_LIMIT_EXCEEDED',
                 context: array_merge($context, [
-                    'suggestion' => 'Please wait before making more requests'
+                    'suggestion' => 'Please wait before making more requests',
                 ])
             ),
             500, 502, 503, 504 => new HuefyException(
@@ -73,7 +73,7 @@ class ExceptionFactory
                 previous: $previous,
                 errorCode: $errorCode ?: 'SERVER_ERROR',
                 context: array_merge($context, [
-                    'suggestion' => 'Please try again later'
+                    'suggestion' => 'Please try again later',
                 ])
             ),
             default => new HuefyException(

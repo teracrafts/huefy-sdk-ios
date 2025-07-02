@@ -61,7 +61,7 @@ class NetworkException extends HuefyException
             message: $message,
             context: [
                 'host' => $host,
-                'suggestion' => 'Please check your internet connection and try again'
+                'suggestion' => 'Please check your internet connection and try again',
             ]
         );
     }
@@ -84,7 +84,7 @@ class NetworkException extends HuefyException
             message: $message,
             context: [
                 'host' => $host,
-                'suggestion' => 'Please check your DNS settings and internet connection'
+                'suggestion' => 'Please check your DNS settings and internet connection',
             ]
         );
     }
@@ -107,7 +107,7 @@ class NetworkException extends HuefyException
             message: $message,
             context: [
                 'details' => $details,
-                'suggestion' => 'Please check your SSL configuration and certificates'
+                'suggestion' => 'Please check your SSL configuration and certificates',
             ]
         );
     }
@@ -130,7 +130,7 @@ class NetworkException extends HuefyException
             message: $message,
             context: [
                 'details' => $details,
-                'suggestion' => 'Please check your network connection and firewall settings'
+                'suggestion' => 'Please check your network connection and firewall settings',
             ]
         );
     }
