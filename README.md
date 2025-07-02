@@ -20,8 +20,8 @@ Huefy SDK provides production-ready libraries for sending emails through the Hue
 
 | Language | Package | Installation | Status |
 |----------|---------|--------------|--------|
-| JavaScript/Node.js | [@huefy/sdk](./sdks/javascript/) | `npm install @huefy/sdk` | ✅ **Complete** |
-| React | [@huefy/react-sdk](./sdks/react/) | `npm install @huefy/react-sdk` | ✅ **Complete** |
+| JavaScript/Node.js | [@huefy-dev/sdk](./sdks/javascript/) | `npm install @huefy-dev/sdk@beta` | ✅ **Complete** |
+| React | [@huefy-dev/react](./sdks/react/) | `npm install @huefy-dev/react@beta` | ✅ **Complete** |
 | Go | [github.com/huefy/huefy-sdk/go](./sdks/go/) | `go get github.com/huefy/huefy-sdk/go` | ✅ **Complete** |
 | Java | [com.huefy:huefy-java-sdk](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
 | Python | [huefy](./sdks/python/) | `pip install huefy` | ✅ **Complete** |
@@ -31,7 +31,7 @@ Huefy SDK provides production-ready libraries for sending emails through the Hue
 
 ### JavaScript/Node.js
 ```javascript
-import { HuefyClient } from '@huefy/sdk';
+import { HuefyClient } from '@huefy-dev/sdk';
 
 const huefy = new HuefyClient({
   apiKey: 'your-api-key'
@@ -45,7 +45,7 @@ await huefy.sendEmail('welcome-email', {
 
 ### React
 ```jsx
-import { HuefyProvider, useHuefy, EmailProvider } from '@huefy/react-sdk';
+import { HuefyProvider, useHuefy, EmailProvider } from '@huefy-dev/react';
 
 function App() {
   return (

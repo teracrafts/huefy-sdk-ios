@@ -288,9 +288,9 @@ huefy-sdk/
 
 | SDK | Registry | Package Name |
 |-----|----------|--------------|
-| JavaScript | npm | `@huefy/sdk` |
+| JavaScript | npm | `@huefy-dev/sdk` |
 | TypeScript | npm | `@huefy/sdk` (same package) |
-| React | npm | `@huefy/react` |
+| React | npm | `@huefy-dev/react` |
 | Go | Go modules | `github.com/huefy/huefy-sdk-go` |
 | Java | Maven Central | `com.huefy:huefy-sdk` |
 | Python | PyPI | `huefy` |
