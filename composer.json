@@ -83,5 +83,6 @@
         }
     },
     "minimum-stability": "stable",
-    "prefer-stable": true
+    "prefer-stable": true,
+    "readme": "README-PHP.md"
 }
