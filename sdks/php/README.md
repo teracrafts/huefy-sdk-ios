@@ -268,13 +268,72 @@ composer analyze
 - `getSuccessRate(): float`
 - `isFullySuccessful(): bool`
 
+## Development & Automation
+
+### Quick Start Commands
+
+```bash
+# Install dependencies with code fixing
+composer install-dev
+
+# Run all quality checks
+composer quality
+
+# Fix code style issues
+composer cs-fix
+
+# Run tests
+composer test
+
+# Security audit
+composer security
+
+# Pre-commit checks (run before committing)
+composer pre-commit
+
+# Release validation
+composer release-check
+```
+
+### Task Automation (from project root)
+
+```bash
+# PHP-specific tasks
+task php-install      # Install dependencies
+task php-quality      # Run quality checks  
+task php-fix          # Fix code style
+task php-security     # Security audit
+task php-update       # Update dependencies
+task php-pre-commit   # Pre-commit checks
+task php-release-check # Validate for release
+
+# General tasks
+task build-php        # Build PHP SDK
+task test-php         # Test PHP SDK
+```
+
+### Automated Release Process
+
+```bash
+# Run the automated release script
+./scripts/php-release.sh 1.0.0-beta.2
+```
+
+This script will:
+- ✅ Validate composer.json
+- ✅ Run quality checks (PHPStan, Psalm, tests)
+- ✅ Security audit
+- ✅ Check for outdated dependencies
+- ✅ Create git tag
+- ✅ Provide Packagist submission instructions
+
 ## Contributing
 
 1. Fork the repository
 2. Create a feature branch
 3. Make your changes
 4. Add tests for new functionality
-5. Run the test suite
+5. Run `composer pre-commit` to validate changes
 6. Submit a pull request
 
 ## License

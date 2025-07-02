@@ -178,7 +178,7 @@ tasks:
     desc: "Build PHP SDK only"
     dir: sdks/php
     cmds:
-      - composer install
+      - composer build
 
   test-js:
     desc: "Test JavaScript SDK only"
@@ -249,6 +249,50 @@ tasks:
       - echo "💡 Use 'task build' to rebuild all SDKs"
       - echo "💡 Use 'task test' to run all tests"
       - echo "💡 Use 'task test-<language>' to test specific SDK"
+
+  # PHP-specific automation tasks
+  php-install:
+    desc: "Install PHP SDK dependencies"
+    dir: sdks/php
+    cmds:
+      - composer install-dev
+
+  php-quality:
+    desc: "Run PHP code quality checks"
+    dir: sdks/php
+    cmds:
+      - composer quality
+
+  php-fix:
+    desc: "Fix PHP code style issues"
+    dir: sdks/php
+    cmds:
+      - composer cs-fix
+
+  php-security:
+    desc: "Run PHP security audit"
+    dir: sdks/php
+    cmds:
+      - composer security
+
+  php-update:
+    desc: "Update PHP dependencies and check for outdated"
+    dir: sdks/php
+    cmds:
+      - composer deps-update
+      - composer deps-outdated
+
+  php-release-check:
+    desc: "Validate PHP SDK for release"
+    dir: sdks/php
+    cmds:
+      - composer release-check
+
+  php-pre-commit:
+    desc: "Run PHP pre-commit checks"
+    dir: sdks/php
+    cmds:
+      - composer pre-commit
 
   #  status:
 #    desc: "Show project status and health"

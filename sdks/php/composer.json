@@ -48,18 +48,49 @@
     "scripts": {
         "test": "phpunit",
         "test-coverage": "phpunit --coverage-html coverage",
+        "test-watch": "phpunit-watcher watch",
         "analyse": "phpstan analyse",
         "psalm": "psalm",
         "cs-check": "php-cs-fixer fix --dry-run --diff",
         "cs-fix": "php-cs-fixer fix",
         "phpmd": "phpmd src text phpmd.xml",
         "phpcs": "phpcs --standard=PSR12 src",
+        "security": "composer audit",
+        "deps-update": "composer update --no-dev",
+        "deps-outdated": "composer outdated --direct",
+        "validate": "composer validate --strict",
+        "install-dev": [
+            "composer install --dev",
+            "composer cs-fix"
+        ],
+        "pre-commit": [
+            "@validate",
+            "@cs-fix",
+            "@analyse",
+            "@test"
+        ],
         "quality": [
             "@cs-check",
             "@analyse",
             "@psalm",
             "@phpmd",
             "@test"
+        ],
+        "ci": [
+            "@validate",
+            "@security",
+            "@quality"
+        ],
+        "build": [
+            "@cs-fix",
+            "@quality",
+            "composer dump-autoload --optimize"
+        ],
+        "release-check": [
+            "@validate",
+            "@security", 
+            "@quality",
+            "@deps-outdated"
         ]
     },
     "config": {
