@@ -20,8 +20,8 @@ Huefy SDK provides production-ready libraries for App Mail Templates across mult
 
 | Language | Package | Installation | Status |
 |----------|---------|--------------|--------|
-| JavaScript/Node.js | [@huefy-dev/sdk](./sdks/javascript/) | `npm install @huefy-dev/sdk` | ✅ **Complete** |
-| React | [@huefy-dev/react](./sdks/react/) | `npm install @huefy-dev/react` | ✅ **Complete** |
+| JavaScript/Node.js | [@teracrafts/huefy](./sdks/javascript/) | `npm install @teracrafts/huefy` | ✅ **Complete** |
+| React | [@teracrafts/huefy-react](./sdks/react/) | `npm install @teracrafts/huefy-react` | ✅ **Complete** |
 | Go | [github.com/huefy/huefy-sdk/go](./sdks/go/) | `go get github.com/huefy/huefy-sdk/go` | ✅ **Complete** |
 | Java | [com.huefy:huefy-java-sdk](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
 | Python | [huefy](./sdks/python/) | `pip install huefy` | ✅ **Complete** |
@@ -31,7 +31,7 @@ Huefy SDK provides production-ready libraries for App Mail Templates across mult
 
 ### JavaScript/Node.js
 ```javascript
-import { HuefyClient } from '@huefy-dev/sdk';
+import { HuefyClient } from '@teracrafts/huefy';
 
 const huefy = new HuefyClient({
   apiKey: 'your-api-key'
@@ -45,7 +45,7 @@ await huefy.sendEmail('welcome-email', {
 
 ### React
 ```jsx
-import { HuefyProvider, useHuefy, EmailProvider } from '@huefy-dev/react';
+import { HuefyProvider, useHuefy, EmailProvider } from '@teracrafts/huefy-react';
 
 function App() {
   return (
