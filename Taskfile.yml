@@ -315,6 +315,16 @@ tasks:
         fi
       - "{{.SCRIPTS_DIR}}/deploy-java-subtree.sh {{.VERSION}}"
 
+  deploy-go:
+    desc: "Deploy Go SDK to standalone repository (usage: task deploy-go VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-go VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-go-subtree.sh {{.VERSION}}"
+
   publish-java:
     desc: "Publish Java SDK to Maven Central (usage: task publish-java VERSION=1.0.0)"
     cmds:
