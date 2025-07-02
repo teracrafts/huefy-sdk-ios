@@ -1,0 +1,87 @@
+{
+    "name": "teracrafts/huefy",
+    "description": "Official PHP SDK for Huefy - App Mail Templates with dynamic email sending",
+    "type": "library",
+    "keywords": ["huefy", "email", "api", "sdk", "template", "transactional"],
+    "homepage": "https://github.com/teracrafts/huefy-sdk",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Huefy Team",
+            "email": "hello@huefy.dev",
+            "homepage": "https://huefy.dev"
+        }
+    ],
+    "support": {
+        "issues": "https://github.com/teracrafts/huefy-sdk/issues",
+        "source": "https://github.com/teracrafts/huefy-sdk",
+        "docs": "https://docs.huefy.dev/sdk/php"
+    },
+    "require": {
+        "php": ">=8.0",
+        "ext-json": "*",
+        "ext-curl": "*",
+        "guzzlehttp/guzzle": "^7.5",
+        "psr/log": "^3.0"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^10.0",
+        "phpstan/phpstan": "^1.10",
+        "friendsofphp/php-cs-fixer": "^3.0",
+        "phpmd/phpmd": "^2.13",
+        "squizlabs/php_codesniffer": "^3.7",
+        "mockery/mockery": "^1.6",
+        "fakerphp/faker": "^1.21"
+    },
+    "autoload": {
+        "psr-4": {
+            "Huefy\\SDK\\": "sdks/php/src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Huefy\\SDK\\Tests\\": "sdks/php/tests/"
+        }
+    },
+    "scripts": {
+        "test": "@php sdks/php/vendor/bin/phpunit -c sdks/php/phpunit.xml",
+        "test-coverage": "@php sdks/php/vendor/bin/phpunit -c sdks/php/phpunit.xml --coverage-html coverage",
+        "analyse": "@php sdks/php/vendor/bin/phpstan analyse -c sdks/php/phpstan.neon",
+        "cs-check": "@php sdks/php/vendor/bin/php-cs-fixer fix --config=sdks/php/.php-cs-fixer.php --dry-run --diff --allow-risky=yes",
+        "cs-fix": "@php sdks/php/vendor/bin/php-cs-fixer fix --config=sdks/php/.php-cs-fixer.php --allow-risky=yes",
+        "phpmd": "@php sdks/php/vendor/bin/phpmd sdks/php/src text sdks/php/phpmd.xml",
+        "security": "composer audit",
+        "validate": "composer validate --strict",
+        "install-dev": [
+            "cd sdks/php && composer install --dev",
+            "@cs-fix"
+        ],
+        "pre-commit": [
+            "@validate",
+            "@cs-fix", 
+            "@analyse",
+            "@test"
+        ],
+        "quality": [
+            "@cs-check",
+            "@analyse",
+            "@phpmd",
+            "@test"
+        ],
+        "post-install-cmd": [
+            "cd sdks/php && composer install"
+        ],
+        "post-update-cmd": [
+            "cd sdks/php && composer update"
+        ]
+    },
+    "config": {
+        "optimize-autoloader": true,
+        "sort-packages": true,
+        "allow-plugins": {
+            "composer/package-versions-deprecated": true
+        }
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true
+}
