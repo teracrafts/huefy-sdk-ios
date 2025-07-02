@@ -65,6 +65,63 @@ cd sdks/python && python -m build && twine upload dist/*
 cd sdks/php && # Auto-published via Packagist webhook
 ```
 
+### Task Automation (Recommended)
+
+The project includes a [Taskfile](https://taskfile.dev) for modern task automation. Install Task CLI and use these convenient commands:
+
+```bash
+# Install Task (one-time setup)
+go install github.com/go-task/task/v3/cmd/task@latest
+# Or via package manager: brew install go-task/tap/go-task
+
+# Development workflow
+task setup           # Set up development environment
+task build            # Build all SDKs
+task test             # Run tests for all SDKs
+task clean            # Clean build artifacts
+
+# Release workflow
+task validate                    # Validate release readiness
+task bump-version VERSION=1.2.0 # Bump versions across all SDKs
+task release VERSION=1.2.0      # Complete release workflow
+
+# Individual SDK tasks
+task build-js         # Build JavaScript SDK only
+task test-python      # Test Python SDK only
+task publish-dry-run  # Dry run publishing
+
+# Utility tasks
+task status           # Show project status
+task security-scan    # Run security scans
+task docs            # Generate documentation
+```
+
+### Release Options
+
+The project supports both **automated** and **manual** release workflows:
+
+#### Option 1: Automated Release (GitHub Actions)
+```bash
+# Trigger automated release via GitHub Actions
+gh workflow run release.yml -f version=1.2.0
+```
+
+#### Option 2: Manual Release (Taskfile)
+```bash
+# Complete manual release workflow
+task release VERSION=1.2.0
+```
+
+#### Option 3: Manual Release (Scripts Only)
+```bash
+# Step-by-step manual release
+./scripts/validate-release.sh 1.2.0
+./scripts/bump-version.sh 1.2.0
+./scripts/build-all.sh
+./scripts/test-all.sh
+./scripts/publish-all.sh
+```
+
 ## Architecture
 
 ### Monorepo Structure
@@ -169,3 +226,21 @@ await client.sendEmail('template-key', data, email, { provider: 'sendgrid' });
 - Ensure valid API key is available in test environment
 - Check that test email addresses are not blacklisted
 - Verify all required test dependencies are installed
+
+**Task Automation Issues**:
+- Install Task CLI: `go install github.com/go-task/task/v3/cmd/task@latest`
+- Verify Taskfile.yml syntax: `task --dry`
+- Check script permissions: `chmod +x scripts/*.sh`
+- For Windows: Use WSL, Git Bash, or PowerShell with Task
+
+**Publishing Issues**:
+- Verify credentials are configured (NPM_TOKEN, PYPI credentials, etc.)
+- Check network connectivity to package registries
+- Use `task publish-dry-run` to test before actual publishing
+- Ensure version numbers follow semantic versioning
+
+**Manual Release Issues**:
+- Run `task validate` before attempting release
+- Check git working directory is clean
+- Verify you're on the main branch
+- Ensure all tests pass with `task test`

@@ -175,7 +175,7 @@ class SendEmailRequest
             'templateKey' => $this->templateKey,
             'recipient' => $this->recipient,
             'data' => $this->data,
-            'provider' => $this->provider?->value,
+            'providerType' => $this->provider?->value,
         ];
     }
 
@@ -203,8 +203,8 @@ class SendEmailRequest
         }
 
         $provider = null;
-        if (isset($data['provider']) && is_string($data['provider'])) {
-            $provider = EmailProvider::tryFrom($data['provider']);
+        if (isset($data['providerType']) && is_string($data['providerType'])) {
+            $provider = EmailProvider::tryFrom($data['providerType']);
         }
 
         return new self(

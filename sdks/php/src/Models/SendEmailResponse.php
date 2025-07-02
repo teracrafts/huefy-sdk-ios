@@ -32,25 +32,49 @@ use InvalidArgumentException;
  */
 class SendEmailResponse
 {
+    private bool $success;
+    private string $message;
     private string $messageId;
     private EmailProvider $provider;
-    private string $status;
 
     /**
      * Create a new email response.
      *
+     * @param bool $success Whether the email was sent successfully
+     * @param string $message Human-readable status message
      * @param string $messageId Unique message identifier
      * @param EmailProvider $provider The provider that sent the email
-     * @param string $status The status of the email
      */
     public function __construct(
+        bool $success,
+        string $message,
         string $messageId,
-        EmailProvider $provider,
-        string $status
+        EmailProvider $provider
     ) {
+        $this->success = $success;
+        $this->message = $message;
         $this->messageId = $messageId;
         $this->provider = $provider;
-        $this->status = $status;
+    }
+
+    /**
+     * Check if the email was sent successfully.
+     *
+     * @return bool
+     */
+    public function isSuccess(): bool
+    {
+        return $this->success;
+    }
+
+    /**
+     * Get the status message.
+     *
+     * @return string
+     */
+    public function getMessage(): string
+    {
+        return $this->message;
     }
 
     /**
@@ -74,16 +98,6 @@ class SendEmailResponse
     }
 
     /**
-     * Get the email status.
-     *
-     * @return string
-     */
-    public function getStatus(): string
-    {
-        return $this->status;
-    }
-
-    /**
      * Convert the response to an array.
      *
      * @return array<string, mixed>
@@ -91,9 +105,10 @@ class SendEmailResponse
     public function toArray(): array
     {
         return [
+            'success' => $this->success,
+            'message' => $this->message,
             'messageId' => $this->messageId,
             'provider' => $this->provider->value,
-            'status' => $this->status,
         ];
     }
 
@@ -108,6 +123,14 @@ class SendEmailResponse
      */
     public static function fromArray(array $data): self
     {
+        if (!isset($data['success']) || !is_bool($data['success'])) {
+            throw new InvalidArgumentException('success is required and must be a boolean');
+        }
+
+        if (!isset($data['message']) || !is_string($data['message'])) {
+            throw new InvalidArgumentException('message is required and must be a string');
+        }
+
         if (!isset($data['messageId']) || !is_string($data['messageId'])) {
             throw new InvalidArgumentException('messageId is required and must be a string');
         }
@@ -116,19 +139,16 @@ class SendEmailResponse
             throw new InvalidArgumentException('provider is required and must be a string');
         }
 
-        if (!isset($data['status']) || !is_string($data['status'])) {
-            throw new InvalidArgumentException('status is required and must be a string');
-        }
-
         $provider = EmailProvider::tryFrom($data['provider']);
         if ($provider === null) {
             throw new InvalidArgumentException(sprintf('Invalid provider: %s', $data['provider']));
         }
 
         return new self(
+            success: $data['success'],
+            message: $data['message'],
             messageId: $data['messageId'],
-            provider: $provider,
-            status: $data['status']
+            provider: $provider
         );
     }
 }

@@ -1,0 +1,266 @@
+version: '3'
+
+# Huefy SDK Taskfile
+# Task automation for the Huefy multi-language SDK monorepo
+# Install Task: https://taskfile.dev/installation/
+
+vars:
+  PROJECT_NAME: "Huefy SDK"
+  SCRIPTS_DIR: "./scripts"
+
+tasks:
+  default:
+    desc: "Show available tasks"
+    cmds:
+      - task --list
+
+  # Development Tasks
+  setup:
+    desc: "Set up development environment for all SDKs"
+    cmds:
+      - echo "🚀 Setting up {{.PROJECT_NAME}} development environment..."
+      - echo "📦 Installing JavaScript SDK dependencies..."
+      - cd sdks/javascript && npm install
+      - echo "⚛️  Installing React SDK dependencies..."
+      - cd sdks/react && npm install
+      - echo "🐹 Installing Go SDK dependencies..."
+      - cd sdks/go && go mod tidy
+      - echo "☕ Installing Java SDK dependencies..."
+      - cd sdks/java && mvn clean install
+      - echo "🐍 Installing Python SDK dependencies..."
+      - cd sdks/python && pip install -e .
+      - echo "🐘 Installing PHP SDK dependencies..."
+      - cd sdks/php && composer install
+      - echo "✅ Development environment setup complete!"
+
+  generate:
+    desc: "Generate SDKs from OpenAPI specification"
+    cmds:
+      - echo "🔄 Generating SDKs from OpenAPI spec..."
+      - "{{.SCRIPTS_DIR}}/generate-sdks.sh"
+
+  build:
+    desc: "Build all SDKs"
+    deps: [generate]
+    cmds:
+      - echo "🔨 Building all {{.PROJECT_NAME}}s..."
+      - "{{.SCRIPTS_DIR}}/build-all.sh"
+
+  test:
+    desc: "Run tests for all SDKs"
+    deps: [build]
+    cmds:
+      - echo "🧪 Running tests for all SDKs..."
+      - "{{.SCRIPTS_DIR}}/test-all.sh"
+
+  clean:
+    desc: "Clean build artifacts from all SDKs"
+    cmds:
+      - echo "🧹 Cleaning build artifacts..."
+      - "{{.SCRIPTS_DIR}}/clean-all.sh"
+
+  # Validation and Quality
+  validate:
+    desc: "Validate release readiness"
+    cmds:
+      - echo "🔍 Validating release readiness..."
+      - "{{.SCRIPTS_DIR}}/validate-release.sh {{.VERSION}}"
+
+  lint:
+    desc: "Run linting for all SDKs"
+    cmds:
+      - echo "🔍 Running linters..."
+      - echo "📦 Linting JavaScript SDK..."
+      - cd sdks/javascript && npm run lint || echo "JavaScript linting skipped"
+      - echo "⚛️  Linting React SDK..."
+      - cd sdks/react && npm run lint || echo "React linting skipped"
+      - echo "🐍 Linting Python SDK..."
+      - cd sdks/python && python -m flake8 huefy/ || echo "Python linting skipped"
+      - echo "🐘 Linting PHP SDK..."
+      - cd sdks/php && composer run lint || echo "PHP linting skipped"
+
+  # Version Management
+  bump-version:
+    desc: "Bump version across all SDKs (usage: task bump-version VERSION=1.2.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task bump-version VERSION=1.2.0"
+          exit 1
+        fi
+      - echo "📈 Bumping version to {{.VERSION}}..."
+      - "{{.SCRIPTS_DIR}}/bump-version.sh {{.VERSION}}"
+
+  # Publishing Tasks
+  publish:
+    desc: "Publish all SDKs to their respective registries"
+    deps: [validate]
+    cmds:
+      - echo "🚀 Publishing all SDKs..."
+      - "{{.SCRIPTS_DIR}}/publish-all.sh"
+
+  publish-dry-run:
+    desc: "Dry run publish (shows what would be published without actually publishing)"
+    cmds:
+      - echo "🧪 Dry run: Publishing all SDKs..."
+      - "{{.SCRIPTS_DIR}}/publish-all.sh --dry-run"
+
+  # Release Workflow
+  release:
+    desc: "Complete release workflow (usage: task release VERSION=1.2.0)"
+    deps: [validate]
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task release VERSION=1.2.0"
+          exit 1
+        fi
+      - echo "🎉 Starting release workflow for version {{.VERSION}}..."
+      - task: bump-version
+        vars: { VERSION: "{{.VERSION}}" }
+      - task: build
+      - task: test
+      - task: lint
+      - task: publish
+      - echo "🏷️  Creating git tag and release..."
+      - git add -A
+      - git commit -m "chore: release version {{.VERSION}}"
+      - git tag "v{{.VERSION}}"
+      - git push origin main
+      - git push origin "v{{.VERSION}}"
+      - echo "✅ Release {{.VERSION}} completed successfully!"
+
+  release-dry-run:
+    desc: "Dry run of release workflow (usage: task release-dry-run VERSION=1.2.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task release-dry-run VERSION=1.2.0"
+          exit 1
+        fi
+      - echo "🧪 Dry run: Release workflow for version {{.VERSION}}..."
+      - task: validate
+        vars: { VERSION: "{{.VERSION}}" }
+      - echo "✅ Dry run completed. Run 'task release VERSION={{.VERSION}}' to execute."
+
+  # Individual SDK Tasks
+  build-js:
+    desc: "Build JavaScript SDK only"
+    dir: sdks/javascript
+    cmds:
+      - npm run build
+
+  build-react:
+    desc: "Build React SDK only" 
+    dir: sdks/react
+    cmds:
+      - npm run build
+
+  build-go:
+    desc: "Build Go SDK only"
+    dir: sdks/go
+    cmds:
+      - go build
+
+  build-java:
+    desc: "Build Java SDK only"
+    dir: sdks/java
+    cmds:
+      - mvn clean package
+
+  build-python:
+    desc: "Build Python SDK only"
+    dir: sdks/python
+    cmds:
+      - python -m build
+
+  build-php:
+    desc: "Build PHP SDK only"
+    dir: sdks/php
+    cmds:
+      - composer install
+
+  test-js:
+    desc: "Test JavaScript SDK only"
+    dir: sdks/javascript
+    cmds:
+      - npm test
+
+  test-react:
+    desc: "Test React SDK only"
+    dir: sdks/react
+    cmds:
+      - npm test
+
+  test-go:
+    desc: "Test Go SDK only"
+    dir: sdks/go
+    cmds:
+      - go test ./...
+
+  test-java:
+    desc: "Test Java SDK only"
+    dir: sdks/java
+    cmds:
+      - mvn test
+
+  test-python:
+    desc: "Test Python SDK only"
+    dir: sdks/python
+    cmds:
+      - python -m pytest
+
+  test-php:
+    desc: "Test PHP SDK only"
+    dir: sdks/php
+    cmds:
+      - composer test
+
+  # Utility Tasks
+  docs:
+    desc: "Generate documentation"
+    cmds:
+      - echo "📚 Generating documentation..."
+      - echo "JavaScript docs..."
+      - cd sdks/javascript && npm run docs || echo "Docs generation skipped"
+      - echo "Java docs..."
+      - cd sdks/java && mvn javadoc:javadoc || echo "Docs generation skipped"
+      - echo "Python docs..."
+      - cd sdks/python && python -m pydoc -w huefy || echo "Docs generation skipped"
+
+  security-scan:
+    desc: "Run security scans on all SDKs"
+    cmds:
+      - echo "🔒 Running security scans..."
+      - echo "📦 Scanning JavaScript dependencies..."
+      - cd sdks/javascript && npm audit || echo "JavaScript audit skipped"
+      - echo "⚛️  Scanning React dependencies..."
+      - cd sdks/react && npm audit || echo "React audit skipped"
+      - echo "🐍 Scanning Python dependencies..."
+      - cd sdks/python && pip-audit || echo "Python audit skipped (pip-audit not installed)"
+      - echo "☕ Scanning Java dependencies..."
+      - cd sdks/java && mvn org.owasp:dependency-check-maven:check || echo "Java security scan skipped"
+
+  dev:
+    desc: "Start development mode (build and watch for changes)"
+    deps: [setup, build]
+    cmds:
+      - echo "🔄 Starting development mode..."
+      - echo "💡 Use 'task build' to rebuild all SDKs"
+      - echo "💡 Use 'task test' to run all tests"
+      - echo "💡 Use 'task test-<language>' to test specific SDK"
+
+  status:
+    desc: "Show project status and health"
+    cmds:
+      - echo "📊 {{.PROJECT_NAME}} Status"
+      - echo "==============================="
+      - git status --short
+      - echo ""
+      - echo "📦 SDK Status:"
+      - echo "JavaScript: $(cd sdks/javascript && [ -f package.json ] && echo '✅ Ready' || echo '❌ Missing')"
+      - echo "React:      $(cd sdks/react && [ -f package.json ] && echo '✅ Ready' || echo '❌ Missing')"
+      - echo "Go:         $(cd sdks/go && [ -f go.mod ] && echo '✅ Ready' || echo '❌ Missing')"
+      - echo "Java:       $(cd sdks/java && [ -f pom.xml ] && echo '✅ Ready' || echo '❌ Missing')"
+      - echo "Python:     $(cd sdks/python && [ -f pyproject.toml ] && echo '✅ Ready' || echo '❌ Missing')"
+      - echo "PHP:        $(cd sdks/php && [ -f composer.json ] && echo '✅ Ready' || echo '❌ Missing')"
