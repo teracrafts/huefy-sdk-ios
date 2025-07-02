@@ -1,10 +1,10 @@
 # Huefy SDK
 
-Multi-language SDKs for the Huefy email sending platform.
+Multi-language SDKs for Huefy - App Mail Templates platform.
 
 ## Overview
 
-Huefy SDK provides production-ready libraries for sending emails through the Huefy API across multiple programming languages. Each SDK provides idiomatic interfaces while maintaining consistent functionality across all supported platforms.
+Huefy SDK provides production-ready libraries for App Mail Templates across multiple programming languages. Create, manage, and send template-based emails with dynamic data substitution using template keys. Each SDK provides idiomatic interfaces while maintaining consistent functionality across all supported platforms.
 
 **🚀 All SDKs are complete and ready for production use!**
 
@@ -20,8 +20,8 @@ Huefy SDK provides production-ready libraries for sending emails through the Hue
 
 | Language | Package | Installation | Status |
 |----------|---------|--------------|--------|
-| JavaScript/Node.js | [@huefy-dev/sdk](./sdks/javascript/) | `npm install @huefy-dev/sdk@beta` | ✅ **Complete** |
-| React | [@huefy-dev/react](./sdks/react/) | `npm install @huefy-dev/react@beta` | ✅ **Complete** |
+| JavaScript/Node.js | [@huefy-dev/sdk](./sdks/javascript/) | `npm install @huefy-dev/sdk` | ✅ **Complete** |
+| React | [@huefy-dev/react](./sdks/react/) | `npm install @huefy-dev/react` | ✅ **Complete** |
 | Go | [github.com/huefy/huefy-sdk/go](./sdks/go/) | `go get github.com/huefy/huefy-sdk/go` | ✅ **Complete** |
 | Java | [com.huefy:huefy-java-sdk](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
 | Python | [huefy](./sdks/python/) | `pip install huefy` | ✅ **Complete** |
