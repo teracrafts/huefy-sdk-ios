@@ -8,14 +8,14 @@
     "authors": [
         {
             "name": "Huefy Team",
-            "email": "developers@huefy.com",
-            "homepage": "https://huefy.com"
+            "email": "hello@huefy.dev",
+            "homepage": "https://huefy.dev"
         }
     ],
     "support": {
         "issues": "https://github.com/huefy/huefy-sdk/issues",
         "source": "https://github.com/huefy/huefy-sdk",
-        "docs": "https://docs.huefy.com/sdk/php"
+        "docs": "https://docs.huefy.dev/sdk/php"
     },
     "require": {
         "php": ">=8.0",

@@ -1,0 +1,315 @@
+name: Security Scan
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+jobs:
+  dependency-check:
+    name: Dependency Vulnerability Scan
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - sdk: javascript
+            scanner: npm audit
+          - sdk: react
+            scanner: npm audit
+          - sdk: python
+            scanner: safety
+          - sdk: java
+            scanner: mvn dependency-check
+          - sdk: php
+            scanner: composer audit
+          - sdk: go
+            scanner: govulncheck
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js (for npm-based SDKs)
+      if: matrix.sdk == 'javascript' || matrix.sdk == 'react'
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        cache: 'npm'
+        cache-dependency-path: sdks/${{ matrix.sdk }}/package-lock.json
+    
+    - name: Setup Python (for Python SDK)
+      if: matrix.sdk == 'python'
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Setup Java (for Java SDK)
+      if: matrix.sdk == 'java'
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+    
+    - name: Setup PHP (for PHP SDK)
+      if: matrix.sdk == 'php'
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+    
+    - name: Setup Go (for Go SDK)
+      if: matrix.sdk == 'go'
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    # JavaScript/React vulnerability scanning
+    - name: Scan JavaScript dependencies
+      if: matrix.sdk == 'javascript' || matrix.sdk == 'react'
+      working-directory: ./sdks/${{ matrix.sdk }}
+      run: |
+        npm ci
+        npm audit --audit-level=moderate
+        npx audit-ci --config ./package.json
+    
+    # Python vulnerability scanning
+    - name: Scan Python dependencies
+      if: matrix.sdk == 'python'
+      working-directory: ./sdks/python
+      run: |
+        pip install safety
+        pip install -e .
+        safety check --json --output safety-report.json || true
+        safety check
+    
+    # Java vulnerability scanning
+    - name: Scan Java dependencies
+      if: matrix.sdk == 'java'
+      working-directory: ./sdks/java
+      run: |
+        mvn org.owasp:dependency-check-maven:check -DfailBuildOnCVSS=7
+    
+    # PHP vulnerability scanning
+    - name: Scan PHP dependencies
+      if: matrix.sdk == 'php'
+      working-directory: ./sdks/php
+      run: |
+        composer install
+        composer audit --format=json --output=composer-audit.json || true
+        composer audit
+    
+    # Go vulnerability scanning
+    - name: Scan Go dependencies
+      if: matrix.sdk == 'go'
+      working-directory: ./sdks/go
+      run: |
+        go install golang.org/x/vuln/cmd/govulncheck@latest
+        govulncheck ./...
+    
+    - name: Upload security reports
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: security-reports-${{ matrix.sdk }}
+        path: |
+          sdks/${{ matrix.sdk }}/*audit*.json
+          sdks/${{ matrix.sdk }}/safety-report.json
+          sdks/${{ matrix.sdk }}/target/dependency-check-report.html
+        retention-days: 30
+
+  code-security-scan:
+    name: Code Security Analysis
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: Initialize CodeQL
+      uses: github/codeql-action/init@v3
+      with:
+        languages: javascript, java, python, go
+        queries: security-and-quality
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Setup Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Build JavaScript SDKs
+      run: |
+        cd sdks/javascript && npm ci && npm run build
+        cd ../react && npm ci && npm run build
+    
+    - name: Build Java SDK
+      working-directory: ./sdks/java
+      run: mvn compile
+    
+    - name: Build Python SDK
+      working-directory: ./sdks/python
+      run: |
+        pip install -e .
+        python -m py_compile huefy/*.py
+    
+    - name: Build Go SDK
+      working-directory: ./sdks/go
+      run: go build ./...
+    
+    - name: Perform CodeQL Analysis
+      uses: github/codeql-action/analyze@v3
+
+  secret-scan:
+    name: Secret Detection
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+    
+    - name: TruffleHog OSS
+      uses: trufflesecurity/trufflehog@main
+      with:
+        path: ./
+        base: main
+        head: HEAD
+        extra_args: --debug --only-verified
+
+  license-check:
+    name: License Compliance
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Check JavaScript/React licenses
+      run: |
+        cd sdks/javascript
+        npm ci
+        npx license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC'
+        
+        cd ../react
+        npm ci
+        npx license-checker --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC'
+    
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Check Python licenses
+      working-directory: ./sdks/python
+      run: |
+        pip install pip-licenses
+        pip install -e .
+        pip-licenses --format=json --output-file=licenses.json
+        pip-licenses --allow-only 'MIT;Apache Software License;BSD License;ISC License'
+    
+    - name: Setup Java
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+    
+    - name: Check Java licenses
+      working-directory: ./sdks/java
+      run: |
+        mvn org.codehaus.mojo:license-maven-plugin:2.2.0:aggregate-third-party-report
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+    
+    - name: Check PHP licenses
+      working-directory: ./sdks/php
+      run: |
+        composer install
+        composer licenses
+    
+    - name: Upload license reports
+      uses: actions/upload-artifact@v4
+      with:
+        name: license-reports
+        path: |
+          sdks/*/licenses.json
+          sdks/java/target/site/aggregate-third-party-report.html
+        retention-days: 30
+
+  security-summary:
+    name: Security Scan Summary
+    needs: [dependency-check, code-security-scan, secret-scan, license-check]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Check scan results
+      run: |
+        echo "## Security Scan Results" >> $GITHUB_STEP_SUMMARY
+        echo "" >> $GITHUB_STEP_SUMMARY
+        
+        if [ "${{ needs.dependency-check.result }}" == "success" ]; then
+          echo "✅ Dependency vulnerability scan passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Dependency vulnerability scan failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.code-security-scan.result }}" == "success" ]; then
+          echo "✅ Code security analysis passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Code security analysis failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.secret-scan.result }}" == "success" ]; then
+          echo "✅ Secret detection scan passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ Secret detection scan failed" >> $GITHUB_STEP_SUMMARY
+        fi
+        
+        if [ "${{ needs.license-check.result }}" == "success" ]; then
+          echo "✅ License compliance check passed" >> $GITHUB_STEP_SUMMARY
+        else
+          echo "❌ License compliance check failed" >> $GITHUB_STEP_SUMMARY
+        fi
+    
+    - name: Create security issue for failures
+      if: needs.dependency-check.result == 'failure' || needs.code-security-scan.result == 'failure' || needs.secret-scan.result == 'failure' || needs.license-check.result == 'failure'
+      run: |
+        gh issue create \
+          --title "Security Scan Failures - $(date +'%Y-%m-%d')" \
+          --body "One or more security scans failed. Please review the scan results and address any security issues." \
+          --label "security,bug" \
+          --assignee "@me"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

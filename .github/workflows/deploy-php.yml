@@ -1,0 +1,229 @@
+name: Deploy PHP SDK
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: Test PHP SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        php-version: ['8.0', '8.1', '8.2', '8.3']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ matrix.php-version }}
+        extensions: mbstring, xml, json
+        coverage: xdebug
+        tools: composer:v2
+    
+    - name: Validate composer.json
+      working-directory: ./sdks/php
+      run: composer validate --strict
+    
+    - name: Install dependencies
+      working-directory: ./sdks/php
+      run: composer install --prefer-dist --no-progress
+    
+    - name: Run linter
+      working-directory: ./sdks/php
+      run: |
+        composer require --dev squizlabs/php_codesniffer
+        vendor/bin/phpcs --standard=PSR12 src/
+    
+    - name: Run static analysis
+      working-directory: ./sdks/php
+      run: |
+        composer require --dev phpstan/phpstan
+        vendor/bin/phpstan analyse src/ --level=8
+    
+    - name: Run tests
+      working-directory: ./sdks/php
+      run: vendor/bin/phpunit --coverage-text
+
+  validate-packagist:
+    name: Validate Packagist Configuration
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        tools: composer:v2
+    
+    - name: Validate composer.json for Packagist
+      working-directory: ./sdks/php
+      run: |
+        # Check required fields for Packagist
+        composer validate --no-check-all --no-check-publish
+        
+        # Verify package name format
+        PACKAGE_NAME=$(composer config name)
+        if [[ ! "$PACKAGE_NAME" =~ ^[a-z0-9]([_.-]?[a-z0-9]+)*/[a-z0-9](([_.]?|-{0,2})[a-z0-9]+)*$ ]]; then
+          echo "❌ Invalid package name format: $PACKAGE_NAME"
+          exit 1
+        fi
+        
+        # Check for required fields
+        for field in description license authors; do
+          if [ -z "$(composer config $field)" ]; then
+            echo "❌ Missing required field: $field"
+            exit 1
+          fi
+        done
+        
+        echo "✅ composer.json is valid for Packagist"
+
+  create-git-tag:
+    name: Create Git Tag for PHP SDK
+    needs: validate-packagist
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' || github.event_name == 'release'
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+    
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Update composer.json version
+      working-directory: ./sdks/php
+      run: |
+        # Update version in composer.json if it has a version field
+        if composer config version > /dev/null 2>&1; then
+          composer config version ${{ steps.version.outputs.version }}
+        fi
+    
+    - name: Create PHP-specific tag
+      run: |
+        TAG="php-v${{ steps.version.outputs.version }}"
+        
+        # Check if tag already exists
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "Tag $TAG already exists, skipping..."
+        else
+          git add sdks/php/composer.json || true
+          git commit -m "chore(php): version ${{ steps.version.outputs.version }}" || true
+          git tag -a "$TAG" -m "PHP SDK version ${{ steps.version.outputs.version }}"
+          git push origin "$TAG"
+          echo "✅ Created tag: $TAG"
+        fi
+
+  packagist-webhook:
+    name: Trigger Packagist Update
+    needs: create-git-tag
+    runs-on: ubuntu-latest
+    if: vars.PACKAGIST_WEBHOOK_URL != ''
+    
+    steps:
+    - name: Trigger Packagist webhook
+      run: |
+        curl -X POST ${{ vars.PACKAGIST_WEBHOOK_URL }} \
+          -H "Content-Type: application/json" \
+          -d '{"repository": {"url": "https://github.com/${{ github.repository }}"}}'
+        
+        echo "✅ Packagist webhook triggered"
+
+  verify-packagist:
+    name: Verify Packagist Update
+    needs: packagist-webhook
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Wait for Packagist to update
+      run: sleep 120  # Wait 2 minutes
+    
+    - name: Check package on Packagist
+      id: check
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        VERSION=${VERSION#v}
+        
+        # Get package info from Packagist
+        RESPONSE=$(curl -s https://packagist.org/packages/huefy/huefy-sdk.json)
+        
+        # Check if version exists
+        if echo "$RESPONSE" | grep -q "\"$VERSION\""; then
+          echo "✅ Version $VERSION is available on Packagist"
+          echo "success=true" >> $GITHUB_OUTPUT
+        else
+          echo "⚠️ Version $VERSION not yet available on Packagist"
+          echo "success=false" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Manual update instructions
+      if: steps.check.outputs.success != 'true'
+      run: |
+        echo "If the package is not updating automatically:"
+        echo "1. Go to https://packagist.org/packages/huefy/huefy-sdk"
+        echo "2. Click 'Update' button"
+        echo "3. Or set up GitHub webhook: https://packagist.org/about#how-to-update-packages"
+
+  create-release-notes:
+    name: Create Release Notes
+    needs: create-git-tag
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Generate changelog
+      working-directory: ./sdks/php
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        cat > RELEASE_NOTES.md << EOF
+        # PHP SDK Release v$VERSION
+        
+        ## Installation
+        
+        \`\`\`bash
+        composer require huefy/huefy-sdk:^$VERSION
+        \`\`\`
+        
+        ## What's Changed
+        
+        See the main release notes for details.
+        
+        ## Full Changelog
+        
+        https://github.com/${{ github.repository }}/compare/php-v${{ env.PREVIOUS_VERSION }}...php-v$VERSION
+        EOF
+    
+    - name: Upload release notes
+      uses: actions/upload-artifact@v4
+      with:
+        name: php-release-notes
+        path: sdks/php/RELEASE_NOTES.md

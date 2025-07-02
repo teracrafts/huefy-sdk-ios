@@ -1,0 +1,158 @@
+name: Update Changelog
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - 'CHANGELOG.md'
+      - '.github/**'
+  workflow_dispatch:
+
+jobs:
+  update-changelog:
+    runs-on: ubuntu-latest
+    if: github.event.head_commit.message != 'chore: update changelog [skip ci]'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Generate changelog
+        run: |
+          echo "# Changelog" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "All notable changes to this project will be documented in this file." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)," >> CHANGELOG.md
+          echo "and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html)." >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          # Get all tags in reverse chronological order
+          TAGS=$(git tag -l --sort=-version:refname | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+' || echo "")
+          
+          if [[ -n "$TAGS" ]]; then
+            PREV_TAG=""
+            for TAG in $TAGS; do
+              echo "## [$TAG] - $(git log -1 --format=%ai $TAG | cut -d' ' -f1)" >> CHANGELOG.md
+              echo "" >> CHANGELOG.md
+              
+              # Get commits between this tag and the previous one
+              if [[ -n "$PREV_TAG" ]]; then
+                RANGE="${TAG}..${PREV_TAG}"
+              else
+                RANGE="${TAG}..HEAD"
+              fi
+              
+              # Categorize commits
+              FEATURES=$(git log $RANGE --pretty=format:"%s" --grep="^feat" --grep="^feature" | head -10)
+              FIXES=$(git log $RANGE --pretty=format:"%s" --grep="^fix" --grep="^bugfix" | head -10)
+              BREAKING=$(git log $RANGE --pretty=format:"%s" --grep="BREAKING CHANGE" | head -5)
+              DOCS=$(git log $RANGE --pretty=format:"%s" --grep="^docs" | head -5)
+              CHORES=$(git log $RANGE --pretty=format:"%s" --grep="^chore" --grep="^ci" --grep="^build" | head -5)
+              
+              if [[ -n "$BREAKING" ]]; then
+                echo "### 💥 BREAKING CHANGES" >> CHANGELOG.md
+                echo "$BREAKING" | while read line; do
+                  echo "- $line" >> CHANGELOG.md
+                done
+                echo "" >> CHANGELOG.md
+              fi
+              
+              if [[ -n "$FEATURES" ]]; then
+                echo "### ✨ Features" >> CHANGELOG.md
+                echo "$FEATURES" | while read line; do
+                  echo "- $line" >> CHANGELOG.md
+                done
+                echo "" >> CHANGELOG.md
+              fi
+              
+              if [[ -n "$FIXES" ]]; then
+                echo "### 🐛 Bug Fixes" >> CHANGELOG.md
+                echo "$FIXES" | while read line; do
+                  echo "- $line" >> CHANGELOG.md
+                done
+                echo "" >> CHANGELOG.md
+              fi
+              
+              if [[ -n "$DOCS" ]]; then
+                echo "### 📚 Documentation" >> CHANGELOG.md
+                echo "$DOCS" | while read line; do
+                  echo "- $line" >> CHANGELOG.md
+                done
+                echo "" >> CHANGELOG.md
+              fi
+              
+              if [[ -n "$CHORES" ]]; then
+                echo "### 🔧 Maintenance" >> CHANGELOG.md
+                echo "$CHORES" | while read line; do
+                  echo "- $line" >> CHANGELOG.md
+                done
+                echo "" >> CHANGELOG.md
+              fi
+              
+              PREV_TAG=$TAG
+            done
+          else
+            echo "## [Unreleased]" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            echo "### ✨ Features" >> CHANGELOG.md
+            echo "- Initial release of Huefy SDK monorepo" >> CHANGELOG.md
+            echo "- JavaScript/TypeScript SDK" >> CHANGELOG.md
+            echo "- React SDK with hooks and components" >> CHANGELOG.md
+            echo "- Python SDK with async support" >> CHANGELOG.md
+            echo "- Go SDK with native error handling" >> CHANGELOG.md
+            echo "- Java SDK with Maven Central publishing" >> CHANGELOG.md
+            echo "- PHP SDK with Composer support" >> CHANGELOG.md
+            echo "" >> CHANGELOG.md
+          fi
+
+          # Add unreleased changes if we have commits after the last tag
+          LAST_TAG=$(echo "$TAGS" | head -1)
+          if [[ -n "$LAST_TAG" ]]; then
+            UNRELEASED=$(git log ${LAST_TAG}..HEAD --pretty=format:"%s" --no-merges)
+            if [[ -n "$UNRELEASED" ]]; then
+              # Insert unreleased section at the top
+              sed -i '/^The format is based on/a\\n## [Unreleased]\n' CHANGELOG.md
+              
+              UNRELEASED_FEATURES=$(echo "$UNRELEASED" | grep -E "^feat|^feature" | head -5)
+              UNRELEASED_FIXES=$(echo "$UNRELEASED" | grep -E "^fix|^bugfix" | head -5)
+              UNRELEASED_DOCS=$(echo "$UNRELEASED" | grep -E "^docs" | head -3)
+              UNRELEASED_CHORES=$(echo "$UNRELEASED" | grep -E "^chore|^ci|^build" | head -3)
+              
+              if [[ -n "$UNRELEASED_FEATURES" ]]; then
+                sed -i '/^## \[Unreleased\]/a\\n### ✨ Features' CHANGELOG.md
+                echo "$UNRELEASED_FEATURES" | while read line; do
+                  sed -i "/^### ✨ Features/a - $line" CHANGELOG.md
+                done
+              fi
+              
+              if [[ -n "$UNRELEASED_FIXES" ]]; then
+                sed -i '/^## \[Unreleased\]/a\\n### 🐛 Bug Fixes' CHANGELOG.md
+                echo "$UNRELEASED_FIXES" | while read line; do
+                  sed -i "/^### 🐛 Bug Fixes/a - $line" CHANGELOG.md
+                done
+              fi
+            fi
+          fi
+
+      - name: Check if changelog changed
+        id: changelog_changed
+        run: |
+          git add CHANGELOG.md
+          if git diff --staged --quiet; then
+            echo "changed=false" >> $GITHUB_OUTPUT
+          else
+            echo "changed=true" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit changelog
+        if: steps.changelog_changed.outputs.changed == 'true'
+        run: |
+          git commit -m "chore: update changelog [skip ci]"
+          git push origin main

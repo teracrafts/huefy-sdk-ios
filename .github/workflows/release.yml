@@ -1,0 +1,283 @@
+name: Coordinated Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., 1.0.0)'
+        required: true
+        type: string
+      prerelease:
+        description: 'Is this a prerelease?'
+        required: false
+        type: boolean
+        default: false
+      skip_tests:
+        description: 'Skip running tests (emergency release only)'
+        required: false
+        type: boolean
+        default: false
+
+jobs:
+  validate-version:
+    name: Validate Release Version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+    
+    steps:
+    - name: Validate version format
+      id: version
+      run: |
+        VERSION="${{ github.event.inputs.version }}"
+        
+        # Validate semantic version format
+        if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9]+(\.[a-zA-Z0-9]+)*)?$ ]]; then
+          echo "❌ Invalid version format: $VERSION"
+          echo "Expected format: X.Y.Z or X.Y.Z-prerelease"
+          exit 1
+        fi
+        
+        TAG="v$VERSION"
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        echo "tag=$TAG" >> $GITHUB_OUTPUT
+        
+        echo "✅ Version $VERSION is valid"
+
+  run-tests:
+    name: Run All Tests
+    needs: validate-version
+    if: github.event.inputs.skip_tests != 'true'
+    uses: ./.github/workflows/ci.yml
+
+  prepare-release:
+    name: Prepare Release
+    needs: [validate-version, run-tests]
+    if: always() && (needs.run-tests.result == 'success' || github.event.inputs.skip_tests == 'true')
+    runs-on: ubuntu-latest
+    outputs:
+      changelog: ${{ steps.changelog.outputs.changelog }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Get previous release
+      id: previous
+      run: |
+        PREVIOUS_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+        echo "previous_tag=$PREVIOUS_TAG" >> $GITHUB_OUTPUT
+        echo "Previous release: $PREVIOUS_TAG"
+    
+    - name: Generate changelog
+      id: changelog
+      run: |
+        VERSION="${{ needs.validate-version.outputs.version }}"
+        PREVIOUS_TAG="${{ steps.previous.outputs.previous_tag }}"
+        
+        if [ -n "$PREVIOUS_TAG" ]; then
+          COMPARISON="$PREVIOUS_TAG..HEAD"
+        else
+          COMPARISON="HEAD"
+        fi
+        
+        # Generate changelog
+        cat > CHANGELOG_TEMP.md << EOF
+        # Release v$VERSION
+        
+        ## What's Changed
+        
+        EOF
+        
+        # Get commits since last release
+        git log $COMPARISON --oneline --no-merges --grep="feat:" --grep="fix:" --grep="BREAKING CHANGE:" --pretty="format:- %s" >> CHANGELOG_TEMP.md || true
+        
+        # If no conventional commits found, get all commits
+        if [ $(wc -l < CHANGELOG_TEMP.md) -eq 3 ]; then
+          echo "" >> CHANGELOG_TEMP.md
+          git log $COMPARISON --oneline --no-merges --pretty="format:- %s" | head -20 >> CHANGELOG_TEMP.md || true
+        fi
+        
+        cat >> CHANGELOG_TEMP.md << EOF
+        
+        ## Full Changelog
+        
+        https://github.com/${{ github.repository }}/compare/$PREVIOUS_TAG...${{ needs.validate-version.outputs.tag }}
+        EOF
+        
+        # Set output
+        CHANGELOG=$(cat CHANGELOG_TEMP.md)
+        echo "changelog<<EOF" >> $GITHUB_OUTPUT
+        echo "$CHANGELOG" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+  update-versions:
+    name: Update Version Numbers
+    needs: [validate-version, prepare-release]
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+    
+    - name: Update JavaScript SDK version
+      working-directory: ./sdks/javascript
+      run: npm version ${{ needs.validate-version.outputs.version }} --no-git-tag-version
+    
+    - name: Update React SDK version
+      working-directory: ./sdks/react
+      run: npm version ${{ needs.validate-version.outputs.version }} --no-git-tag-version
+    
+    - name: Update Python SDK version
+      working-directory: ./sdks/python
+      run: |
+        sed -i "s/version = \".*\"/version = \"${{ needs.validate-version.outputs.version }}\"/" pyproject.toml
+    
+    - name: Update Java SDK version
+      run: |
+        cd sdks/java
+        mvn versions:set -DnewVersion=${{ needs.validate-version.outputs.version }} -DgenerateBackupPoms=false
+    
+    - name: Update PHP SDK version
+      working-directory: ./sdks/php
+      run: |
+        # Update version in composer.json if it has a version field
+        if composer config version > /dev/null 2>&1; then
+          composer config version ${{ needs.validate-version.outputs.version }}
+        fi
+    
+    - name: Commit version updates
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+        
+        git add -A
+        git commit -m "chore: bump version to ${{ needs.validate-version.outputs.version }}"
+        git push
+
+  create-release:
+    name: Create GitHub Release
+    needs: [validate-version, prepare-release, update-versions]
+    runs-on: ubuntu-latest
+    outputs:
+      release_id: ${{ steps.release.outputs.id }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main
+    
+    - name: Create Release
+      id: release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ needs.validate-version.outputs.tag }}
+        release_name: Release ${{ needs.validate-version.outputs.tag }}
+        body: ${{ needs.prepare-release.outputs.changelog }}
+        draft: false
+        prerelease: ${{ github.event.inputs.prerelease }}
+
+  deploy-npm:
+    name: Deploy to NPM
+    needs: create-release
+    uses: ./.github/workflows/deploy-npm.yml
+    secrets: inherit
+
+  deploy-python:
+    name: Deploy to PyPI
+    needs: create-release
+    uses: ./.github/workflows/deploy-python.yml
+    secrets: inherit
+
+  deploy-java:
+    name: Deploy to Maven Central
+    needs: create-release
+    uses: ./.github/workflows/deploy-java.yml
+    secrets: inherit
+
+  deploy-php:
+    name: Deploy PHP SDK
+    needs: create-release
+    uses: ./.github/workflows/deploy-php.yml
+    secrets: inherit
+
+  deploy-go:
+    name: Deploy Go Module
+    needs: create-release
+    uses: ./.github/workflows/deploy-go.yml
+    secrets: inherit
+
+  post-release:
+    name: Post-Release Tasks
+    needs: [create-release, deploy-npm, deploy-python, deploy-java, deploy-php, deploy-go]
+    if: always()
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Check deployment status
+      run: |
+        echo "## Deployment Status" > deployment_status.md
+        echo "" >> deployment_status.md
+        
+        # Check each deployment result
+        if [ "${{ needs.deploy-npm.result }}" == "success" ]; then
+          echo "✅ NPM: JavaScript & React SDKs deployed successfully" >> deployment_status.md
+        else
+          echo "❌ NPM: Deployment failed or skipped" >> deployment_status.md
+        fi
+        
+        if [ "${{ needs.deploy-python.result }}" == "success" ]; then
+          echo "✅ PyPI: Python SDK deployed successfully" >> deployment_status.md
+        else
+          echo "❌ PyPI: Deployment failed or skipped" >> deployment_status.md
+        fi
+        
+        if [ "${{ needs.deploy-java.result }}" == "success" ]; then
+          echo "✅ Maven Central: Java SDK deployed successfully" >> deployment_status.md
+        else
+          echo "❌ Maven Central: Deployment failed or skipped" >> deployment_status.md
+        fi
+        
+        if [ "${{ needs.deploy-php.result }}" == "success" ]; then
+          echo "✅ Packagist: PHP SDK deployed successfully" >> deployment_status.md
+        else
+          echo "❌ Packagist: Deployment failed or skipped" >> deployment_status.md
+        fi
+        
+        if [ "${{ needs.deploy-go.result }}" == "success" ]; then
+          echo "✅ Go Modules: Go SDK deployed successfully" >> deployment_status.md
+        else
+          echo "❌ Go Modules: Deployment failed or skipped" >> deployment_status.md
+        fi
+    
+    - name: Update release with deployment status
+      run: |
+        gh release edit ${{ needs.validate-version.outputs.tag }} \
+          --notes-file deployment_status.md \
+          --notes-start-tag "## Deployment Status"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Create tracking issue for failed deployments
+      if: needs.deploy-npm.result == 'failure' || needs.deploy-python.result == 'failure' || needs.deploy-java.result == 'failure' || needs.deploy-php.result == 'failure' || needs.deploy-go.result == 'failure'
+      run: |
+        gh issue create \
+          --title "Release ${{ needs.validate-version.outputs.tag }}: Failed Deployments" \
+          --body "Some SDK deployments failed for release ${{ needs.validate-version.outputs.tag }}. Please check the deployment logs and retry manually if needed." \
+          --label "release,bug"
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

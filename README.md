@@ -281,6 +281,73 @@ cd sdks/python && pytest
 cd sdks/php && composer test
 ```
 
+## Deployment & Publishing
+
+The Huefy SDK uses automated GitHub Actions workflows to deploy all SDKs simultaneously to their respective package registries.
+
+### Quick Release
+
+Create a coordinated release across all platforms:
+
+```bash
+# Automated release (recommended)
+gh workflow run release.yml -f version=1.2.0
+
+# Prerelease
+gh workflow run release.yml -f version=2.0.0-beta.1 -f prerelease=true
+
+# Manual version bump
+./scripts/bump-version.sh 1.2.0
+```
+
+### Package Registries
+
+The deployment pipeline publishes to:
+
+- **NPM**: `@huefy/sdk`, `@huefy/react-sdk`
+- **PyPI**: `huefy`
+- **Maven Central**: `dev.huefy:huefy-java-sdk`
+- **Packagist**: `huefy/huefy-sdk`
+- **Go Modules**: `github.com/huefy/huefy-sdk/sdks/go`
+
+### Prerequisites
+
+Configure these GitHub Secrets for automated deployment:
+
+- `NPM_TOKEN` - NPM access token
+- `PYPI_TOKEN` - PyPI API token
+- `MAVEN_USERNAME`, `MAVEN_PASSWORD` - OSSRH credentials
+- `MAVEN_GPG_PRIVATE_KEY`, `MAVEN_GPG_PASSPHRASE` - GPG signing
+
+### Individual SDK Deployment
+
+Deploy specific SDKs independently:
+
+```bash
+# NPM (JavaScript & React)
+gh workflow run deploy-npm.yml -f version=1.2.0
+
+# PyPI (Python)
+gh workflow run deploy-python.yml -f version=1.2.0
+
+# Maven Central (Java)
+gh workflow run deploy-java.yml -f version=1.2.0
+
+# Packagist (PHP)
+gh workflow run deploy-php.yml -f version=1.2.0
+
+# Go Modules
+gh workflow run deploy-go.yml -f version=1.2.0
+```
+
+### Version Management
+
+All SDKs follow [Semantic Versioning](https://semver.org/) and maintain synchronized version numbers:
+
+- **MAJOR**: Incompatible API changes
+- **MINOR**: Backward-compatible functionality additions  
+- **PATCH**: Backward-compatible bug fixes
+
 ## Contributing
 
 We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.

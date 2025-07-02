@@ -1,0 +1,230 @@
+name: Security
+
+on:
+  schedule:
+    # Run security scans daily at 2 AM UTC
+    - cron: '0 2 * * *'
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # Dependency vulnerability scanning
+  dependency-scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sdk: [javascript, react, python, go, java, php]
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: 'sdks/${{ matrix.sdk }}'
+          format: 'sarif'
+          output: 'trivy-${{ matrix.sdk }}.sarif'
+      
+      - name: Upload Trivy scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-${{ matrix.sdk }}.sarif'
+          category: ${{ matrix.sdk }}
+
+  # NPM packages security audit
+  npm-audit:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        sdk: [javascript, react]
+    defaults:
+      run:
+        working-directory: sdks/${{ matrix.sdk }}
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'sdks/${{ matrix.sdk }}/package-lock.json'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+      
+      - name: Run npm audit fix
+        if: failure()
+        run: |
+          npm audit fix
+          npm test
+
+  # Python dependencies security scan
+  python-safety:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/python
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install safety bandit
+          pip install -e ".[dev]"
+      
+      - name: Run Safety check
+        run: safety check --json --output safety-report.json
+        continue-on-error: true
+      
+      - name: Run Bandit security analysis
+        run: bandit -r huefy -f json -o bandit-report.json
+        continue-on-error: true
+      
+      - name: Upload security reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-security-reports
+          path: |
+            sdks/python/safety-report.json
+            sdks/python/bandit-report.json
+
+  # Go dependencies security scan
+  go-nancy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/go
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Go
+        uses: actions/setup-go@v4
+        with:
+          go-version: '1.21'
+      
+      - name: Download dependencies
+        run: go mod download
+      
+      - name: Install gosec
+        run: go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
+      
+      - name: Run gosec security scanner
+        run: gosec -fmt json -out gosec-report.json ./...
+        continue-on-error: true
+      
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@latest
+      
+      - name: Run govulncheck
+        run: govulncheck ./...
+
+  # Java dependencies security scan
+  java-owasp:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/java
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+          cache: maven
+      
+      - name: Run OWASP Dependency Check
+        run: |
+          mvn org.owasp:dependency-check-maven:check \
+            -DfailBuildOnCVSS=7 \
+            -DsuppressionsLocation=owasp-suppressions.xml
+        continue-on-error: true
+      
+      - name: Upload OWASP report
+        uses: actions/upload-artifact@v4
+        with:
+          name: java-owasp-report
+          path: sdks/java/target/dependency-check-report.html
+
+  # PHP dependencies security scan
+  php-security:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: sdks/php
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+          tools: composer:v2
+      
+      - name: Install dependencies
+        run: composer install --prefer-dist --no-progress
+      
+      - name: Install security checker
+        run: |
+          composer global require enlightn/security-checker
+          composer global require roave/security-advisories:dev-latest
+      
+      - name: Run security check
+        run: ~/.composer/vendor/bin/security-checker security:check composer.lock
+
+  # Secret scanning
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: TruffleHog OSS
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./
+          base: main
+          head: HEAD
+          extra_args: --debug --only-verified
+
+  # License compliance check
+  license-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+      
+      - name: Install license checker
+        run: npm install -g license-checker
+      
+      - name: Check JavaScript licenses
+        run: |
+          cd sdks/javascript
+          npm ci
+          license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC'
+      
+      - name: Check React licenses
+        run: |
+          cd sdks/react
+          npm ci
+          license-checker --summary --onlyAllow 'MIT;Apache-2.0;BSD-2-Clause;BSD-3-Clause;ISC'

@@ -1,0 +1,170 @@
+name: Version Bump
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_type:
+        description: 'Version bump type'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - major
+          - minor
+          - patch
+          - prerelease
+      prerelease_type:
+        description: 'Prerelease type (only for prerelease)'
+        required: false
+        default: 'beta'
+        type: choice
+        options:
+          - alpha
+          - beta
+          - rc
+      custom_version:
+        description: 'Custom version (overrides version_type)'
+        required: false
+        type: string
+
+jobs:
+  bump-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Setup Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Determine new version
+        id: version
+        run: |
+          if [[ -n "${{ github.event.inputs.custom_version }}" ]]; then
+            NEW_VERSION="${{ github.event.inputs.custom_version }}"
+          else
+            # Get current version from JavaScript SDK
+            CURRENT_VERSION=$(jq -r '.version' sdks/javascript/package.json)
+            echo "Current version: $CURRENT_VERSION"
+            
+            # Calculate new version based on type
+            case "${{ github.event.inputs.version_type }}" in
+              major)
+                NEW_VERSION=$(npm version --no-git-tag-version major --prefix sdks/javascript | sed 's/v//')
+                ;;
+              minor)
+                NEW_VERSION=$(npm version --no-git-tag-version minor --prefix sdks/javascript | sed 's/v//')
+                ;;
+              patch)
+                NEW_VERSION=$(npm version --no-git-tag-version patch --prefix sdks/javascript | sed 's/v//')
+                ;;
+              prerelease)
+                if [[ "$CURRENT_VERSION" == *"-"* ]]; then
+                  # Already a prerelease, just increment
+                  NEW_VERSION=$(npm version --no-git-tag-version prerelease --prefix sdks/javascript | sed 's/v//')
+                else
+                  # First prerelease
+                  NEW_VERSION=$(npm version --no-git-tag-version prerelease --preid=${{ github.event.inputs.prerelease_type }} --prefix sdks/javascript | sed 's/v//')
+                fi
+                ;;
+            esac
+          fi
+          
+          echo "New version: $NEW_VERSION"
+          echo "version=$NEW_VERSION" >> $GITHUB_OUTPUT
+
+      - name: Update JavaScript SDK version
+        run: |
+          cd sdks/javascript
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+
+      - name: Update React SDK version
+        run: |
+          cd sdks/react
+          npm version ${{ steps.version.outputs.version }} --no-git-tag-version
+          # Update dependency on @huefy/sdk
+          jq '.dependencies["@huefy/sdk"] = "${{ steps.version.outputs.version }}"' package.json > package.json.tmp
+          mv package.json.tmp package.json
+
+      - name: Update Python SDK version
+        run: |
+          cd sdks/python
+          sed -i 's/version = ".*"/version = "${{ steps.version.outputs.version }}"/' pyproject.toml
+
+      - name: Update Java SDK version
+        run: |
+          cd sdks/java
+          mvn versions:set -DnewVersion=${{ steps.version.outputs.version }}
+          mvn versions:commit
+
+      - name: Update Go SDK version (no action needed)
+        run: echo "Go modules use git tags for versioning"
+
+      - name: Update PHP SDK version (no action needed)
+        run: echo "PHP packages use git tags for versioning via Packagist"
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          echo "## v${{ steps.version.outputs.version }} ($(date '+%Y-%m-%d'))" > CHANGELOG_ENTRY.md
+          echo "" >> CHANGELOG_ENTRY.md
+          
+          # Get commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+          if [[ -n "$LAST_TAG" ]]; then
+            echo "### Changes since $LAST_TAG" >> CHANGELOG_ENTRY.md
+            git log ${LAST_TAG}..HEAD --pretty=format:"- %s (%h)" --no-merges >> CHANGELOG_ENTRY.md
+          else
+            echo "### Initial release" >> CHANGELOG_ENTRY.md
+            echo "- Initial release of Huefy SDK" >> CHANGELOG_ENTRY.md
+          fi
+          
+          echo "" >> CHANGELOG_ENTRY.md
+
+      - name: Update main CHANGELOG.md
+        run: |
+          if [[ -f CHANGELOG.md ]]; then
+            # Prepend new entry to existing changelog
+            cat CHANGELOG_ENTRY.md CHANGELOG.md > CHANGELOG_NEW.md
+            mv CHANGELOG_NEW.md CHANGELOG.md
+          else
+            # Create new changelog
+            echo "# Changelog" > CHANGELOG.md
+            echo "" >> CHANGELOG.md
+            cat CHANGELOG_ENTRY.md >> CHANGELOG.md
+          fi
+
+      - name: Commit version changes
+        run: |
+          git add .
+          git commit -m "chore: bump version to v${{ steps.version.outputs.version }}
+
+          - Update all SDK package versions to ${{ steps.version.outputs.version }}
+          - Update CHANGELOG.md with release notes
+          - Synchronize dependency versions across SDKs"
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release v${{ steps.version.outputs.version }}"
+          git push origin main
+          git push origin "v${{ steps.version.outputs.version }}"
+
+      - name: Create GitHub Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          release_name: Release v${{ steps.version.outputs.version }}
+          body_path: CHANGELOG_ENTRY.md
+          draft: true
+          prerelease: ${{ contains(steps.version.outputs.version, 'alpha') || contains(steps.version.outputs.version, 'beta') || contains(steps.version.outputs.version, 'rc') }}

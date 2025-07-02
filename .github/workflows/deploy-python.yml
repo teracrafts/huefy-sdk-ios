@@ -1,0 +1,208 @@
+name: Deploy to PyPI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+      test_pypi:
+        description: 'Deploy to Test PyPI first'
+        required: false
+        type: boolean
+        default: true
+
+jobs:
+  test:
+    name: Test Python SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.8', '3.9', '3.10', '3.11', '3.12']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v5
+      with:
+        python-version: ${{ matrix.python-version }}
+    
+    - name: Install dependencies
+      working-directory: ./sdks/python
+      run: |
+        python -m pip install --upgrade pip
+        pip install -e .[dev]
+    
+    - name: Run tests
+      working-directory: ./sdks/python
+      run: pytest --cov=huefy --cov-report=xml
+    
+    - name: Run linters
+      working-directory: ./sdks/python
+      run: |
+        flake8 huefy tests
+        black --check huefy tests
+        mypy huefy
+
+  build:
+    name: Build Python Package
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install build dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install build twine
+    
+    - name: Set version from input (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      working-directory: ./sdks/python
+      run: |
+        sed -i "s/version = \".*\"/version = \"${{ github.event.inputs.version }}\"/" pyproject.toml
+    
+    - name: Set version from tag (release)
+      if: github.event_name == 'release'
+      working-directory: ./sdks/python
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        sed -i "s/version = \".*\"/version = \"$VERSION\"/" pyproject.toml
+    
+    - name: Build package
+      working-directory: ./sdks/python
+      run: python -m build
+    
+    - name: Check package
+      working-directory: ./sdks/python
+      run: twine check dist/*
+    
+    - name: Upload artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: python-dist
+        path: sdks/python/dist/
+
+  deploy-test-pypi:
+    name: Deploy to Test PyPI
+    needs: build
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: test-pypi
+      url: https://test.pypi.org/project/huefy/
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: python-dist
+        path: dist/
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install twine
+      run: pip install twine
+    
+    - name: Upload to Test PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.TEST_PYPI_TOKEN }}
+      run: |
+        twine upload --repository testpypi dist/*
+    
+    - name: Test installation from Test PyPI
+      run: |
+        sleep 30  # Wait for package to be available
+        pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple huefy
+        python -c "import huefy; print(f'Successfully installed huefy {huefy.__version__}')"
+
+  deploy-pypi:
+    name: Deploy to PyPI
+    needs: build
+    if: github.event_name == 'release' || (github.event_name == 'workflow_dispatch' && github.event.inputs.test_pypi == 'false')
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/huefy/
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: python-dist
+        path: dist/
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install twine
+      run: pip install twine
+    
+    - name: Upload to PyPI
+      env:
+        TWINE_USERNAME: __token__
+        TWINE_PASSWORD: ${{ secrets.PYPI_TOKEN }}
+      run: |
+        twine upload dist/*
+    
+    - name: Verify installation
+      run: |
+        sleep 60  # Wait for package to be available
+        pip install huefy
+        python -c "import huefy; print(f'Successfully installed huefy {huefy.__version__}')"
+
+  create-release-pr:
+    name: Create Release PR
+    needs: deploy-pypi
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update version in pyproject.toml
+      working-directory: ./sdks/python
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        # Bump to next dev version
+        IFS='.' read -ra VERSION_PARTS <<< "$VERSION"
+        PATCH=$((VERSION_PARTS[2] + 1))
+        NEXT_VERSION="${VERSION_PARTS[0]}.${VERSION_PARTS[1]}.$PATCH.dev0"
+        sed -i "s/version = \".*\"/version = \"$NEXT_VERSION\"/" pyproject.toml
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore(python): bump version to next development cycle'
+        title: 'chore(python): bump version after ${{ github.event.release.tag_name }} release'
+        body: |
+          This PR updates the Python SDK version after the PyPI release.
+          
+          Released version: ${{ github.event.release.tag_name }}
+          
+          The version has been bumped to the next development version.
+        branch: release/python-bump-${{ github.event.release.tag_name }}
+        delete-branch: true

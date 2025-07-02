@@ -1,0 +1,120 @@
+version: 2
+updates:
+  # JavaScript SDK dependencies
+  - package-ecosystem: "npm"
+    directory: "/sdks/javascript"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "javascript"
+    commit-message:
+      prefix: "deps(js)"
+      include: "scope"
+
+  # React SDK dependencies
+  - package-ecosystem: "npm"
+    directory: "/sdks/react"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "react"
+    commit-message:
+      prefix: "deps(react)"
+      include: "scope"
+
+  # Python SDK dependencies
+  - package-ecosystem: "pip"
+    directory: "/sdks/python"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "python"
+    commit-message:
+      prefix: "deps(python)"
+      include: "scope"
+
+  # Go SDK dependencies
+  - package-ecosystem: "gomod"
+    directory: "/sdks/go"
+    schedule:
+      interval: "weekly"
+      day: "tuesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "go"
+    commit-message:
+      prefix: "deps(go)"
+      include: "scope"
+
+  # Java SDK dependencies
+  - package-ecosystem: "maven"
+    directory: "/sdks/java"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "java"
+    commit-message:
+      prefix: "deps(java)"
+      include: "scope"
+
+  # PHP SDK dependencies
+  - package-ecosystem: "composer"
+    directory: "/sdks/php"
+    schedule:
+      interval: "weekly"
+      day: "wednesday"
+      time: "09:00"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "php"
+    commit-message:
+      prefix: "deps(php)"
+      include: "scope"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "thursday"
+      time: "09:00"
+    open-pull-requests-limit: 3
+    reviewers:
+      - "huefy/sdk-team"
+    labels:
+      - "dependencies"
+      - "github-actions"
+    commit-message:
+      prefix: "deps(actions)"
+      include: "scope"

@@ -1,0 +1,278 @@
+name: Deploy Go Module
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to tag (e.g., 1.0.0)'
+        required: true
+        type: string
+
+jobs:
+  test:
+    name: Test Go SDK
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        go-version: ['1.19', '1.20', '1.21']
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: ${{ matrix.go-version }}
+    
+    - name: Cache Go modules
+      uses: actions/cache@v4
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: |
+          ${{ runner.os }}-go-
+    
+    - name: Download dependencies
+      working-directory: ./sdks/go
+      run: go mod download
+    
+    - name: Run tests
+      working-directory: ./sdks/go
+      run: go test -v -race -coverprofile=coverage.out ./...
+    
+    - name: Run vet
+      working-directory: ./sdks/go
+      run: go vet ./...
+    
+    - name: Run staticcheck
+      working-directory: ./sdks/go
+      run: |
+        go install honnef.co/go/tools/cmd/staticcheck@latest
+        staticcheck ./...
+    
+    - name: Check module
+      working-directory: ./sdks/go
+      run: |
+        go mod tidy
+        if [ -n "$(git status --porcelain)" ]; then
+          echo "❌ go mod tidy made changes. Please run 'go mod tidy' and commit the changes."
+          exit 1
+        fi
+
+  validate-module:
+    name: Validate Go Module
+    needs: test
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v5
+      with:
+        go-version: '1.21'
+    
+    - name: Validate module path
+      working-directory: ./sdks/go
+      run: |
+        MODULE_PATH=$(go list -m)
+        EXPECTED_PATH="github.com/huefy/huefy-sdk/sdks/go"
+        
+        if [ "$MODULE_PATH" != "$EXPECTED_PATH" ]; then
+          echo "❌ Invalid module path: $MODULE_PATH"
+          echo "Expected: $EXPECTED_PATH"
+          exit 1
+        fi
+        
+        echo "✅ Module path is correct: $MODULE_PATH"
+    
+    - name: Check for v2+ module
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        VERSION=${VERSION#v}
+        MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)
+        
+        if [ "$MAJOR_VERSION" -ge 2 ]; then
+          MODULE_PATH=$(cd sdks/go && go list -m)
+          if [[ ! "$MODULE_PATH" =~ /v$MAJOR_VERSION$ ]]; then
+            echo "⚠️ Warning: Major version v$MAJOR_VERSION requires module path to end with /v$MAJOR_VERSION"
+            echo "Current module path: $MODULE_PATH"
+          fi
+        fi
+
+  create-git-tag:
+    name: Create Git Tag for Go SDK
+    needs: validate-module
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        fetch-depth: 0
+    
+    - name: Configure Git
+      run: |
+        git config user.name "GitHub Actions"
+        git config user.email "actions@github.com"
+    
+    - name: Determine version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+          VERSION="${{ github.event.inputs.version }}"
+        else
+          VERSION="${GITHUB_REF#refs/tags/v}"
+        fi
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+    
+    - name: Create Go module tag
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        TAG="sdks/go/v$VERSION"
+        
+        # Check if tag already exists
+        if git rev-parse "$TAG" >/dev/null 2>&1; then
+          echo "Tag $TAG already exists, skipping..."
+        else
+          git tag -a "$TAG" -m "Go SDK version $VERSION"
+          git push origin "$TAG"
+          echo "✅ Created tag: $TAG"
+        fi
+        
+        # For v2+ modules, also create a branch
+        MAJOR_VERSION=$(echo $VERSION | cut -d. -f1)
+        if [ "$MAJOR_VERSION" -ge 2 ]; then
+          BRANCH="sdks/go/v$MAJOR_VERSION"
+          if ! git show-ref --verify --quiet "refs/remotes/origin/$BRANCH"; then
+            git checkout -b "$BRANCH"
+            git push origin "$BRANCH"
+            echo "✅ Created branch: $BRANCH"
+          fi
+        fi
+
+  verify-go-proxy:
+    name: Verify Go Proxy Update
+    needs: create-git-tag
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Wait for proxy update
+      run: sleep 60  # Wait 1 minute for proxy to update
+    
+    - name: Request proxy update
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        VERSION=${VERSION#v}
+        MODULE="github.com/huefy/huefy-sdk/sdks/go"
+        
+        # Request proxy to fetch the new version
+        curl -s "https://proxy.golang.org/${MODULE}/@v/v${VERSION}.info" > /dev/null || true
+        
+        # Also request the module list to be updated
+        curl -s "https://proxy.golang.org/${MODULE}/@v/list" > /dev/null || true
+        
+        echo "✅ Requested Go proxy update for ${MODULE}@v${VERSION}"
+    
+    - name: Verify on pkg.go.dev
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        VERSION=${VERSION#v}
+        MODULE="github.com/huefy/huefy-sdk/sdks/go"
+        
+        # Check if version is available
+        sleep 30
+        RESPONSE=$(curl -s -o /dev/null -w "%{http_code}" "https://pkg.go.dev/${MODULE}@v${VERSION}")
+        
+        if [ "$RESPONSE" == "200" ]; then
+          echo "✅ Version v$VERSION is available on pkg.go.dev"
+          echo "URL: https://pkg.go.dev/${MODULE}@v${VERSION}"
+        else
+          echo "⚠️ Version v$VERSION not yet available on pkg.go.dev (this may take a few minutes)"
+        fi
+
+  create-release-example:
+    name: Create Release Example
+    needs: create-git-tag
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Create example update
+      run: |
+        VERSION="${{ github.event.inputs.version || github.ref_name }}"
+        VERSION=${VERSION#v}
+        
+        cat > GO_MODULE_USAGE.md << EOF
+        # Using Huefy Go SDK v$VERSION
+        
+        ## Installation
+        
+        \`\`\`bash
+        go get github.com/huefy/huefy-sdk/sdks/go@v$VERSION
+        \`\`\`
+        
+        ## Import
+        
+        \`\`\`go
+        import "github.com/huefy/huefy-sdk/sdks/go"
+        \`\`\`
+        
+        ## Verify Installation
+        
+        \`\`\`bash
+        go list -m github.com/huefy/huefy-sdk/sdks/go
+        \`\`\`
+        
+        This should output:
+        \`\`\`
+        github.com/huefy/huefy-sdk/sdks/go v$VERSION
+        \`\`\`
+        EOF
+    
+    - name: Upload usage instructions
+      uses: actions/upload-artifact@v4
+      with:
+        name: go-usage-instructions
+        path: GO_MODULE_USAGE.md
+
+  update-examples:
+    name: Update Go Examples
+    needs: create-git-tag
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Update go.mod in examples
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        
+        # Update any example go.mod files
+        find . -path "*/examples/*/go.mod" -type f | while read -r modfile; do
+          if grep -q "github.com/huefy/huefy-sdk/sdks/go" "$modfile"; then
+            cd $(dirname "$modfile")
+            go get github.com/huefy/huefy-sdk/sdks/go@v$VERSION
+            go mod tidy
+            cd -
+          fi
+        done
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore(go): update examples to use v${{ github.event.release.tag_name }}'
+        title: 'chore(go): update examples after ${{ github.event.release.tag_name }} release'
+        body: |
+          This PR updates the Go examples to use the latest released version.
+          
+          Released version: ${{ github.event.release.tag_name }}
+        branch: release/go-examples-${{ github.event.release.tag_name }}
+        delete-branch: true

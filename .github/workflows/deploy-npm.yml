@@ -1,0 +1,209 @@
+name: Deploy to NPM
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to publish (e.g., 1.0.0)'
+        required: true
+        type: string
+      tag:
+        description: 'NPM tag (latest, beta, next)'
+        required: true
+        default: 'latest'
+        type: choice
+        options:
+          - latest
+          - beta
+          - next
+          - alpha
+
+jobs:
+  test:
+    name: Test SDKs
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+        sdk: [javascript, react]
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Use Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        cache: 'npm'
+        cache-dependency-path: sdks/${{ matrix.sdk }}/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./sdks/${{ matrix.sdk }}
+      run: npm ci
+    
+    - name: Run tests
+      working-directory: ./sdks/${{ matrix.sdk }}
+      run: npm test
+    
+    - name: Build
+      working-directory: ./sdks/${{ matrix.sdk }}
+      run: npm run build
+
+  publish-javascript:
+    name: Publish JavaScript SDK to NPM
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+        cache-dependency-path: sdks/javascript/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./sdks/javascript
+      run: npm ci
+    
+    - name: Build SDK
+      working-directory: ./sdks/javascript
+      run: npm run build
+    
+    - name: Set version from input (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      working-directory: ./sdks/javascript
+      run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+    
+    - name: Set version from tag (release)
+      if: github.event_name == 'release'
+      working-directory: ./sdks/javascript
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        npm version $VERSION --no-git-tag-version
+    
+    - name: Configure npm for publishing
+      run: |
+        echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+        npm whoami
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Publish to NPM (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      working-directory: ./sdks/javascript
+      run: npm publish --access public --tag ${{ github.event.inputs.tag }}
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Publish to NPM (release)
+      if: github.event_name == 'release'
+      working-directory: ./sdks/javascript
+      run: |
+        if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+          npm publish --access public --tag beta
+        else
+          npm publish --access public --tag latest
+        fi
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  publish-react:
+    name: Publish React SDK to NPM
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20.x'
+        registry-url: 'https://registry.npmjs.org'
+        cache: 'npm'
+        cache-dependency-path: sdks/react/package-lock.json
+    
+    - name: Install dependencies
+      working-directory: ./sdks/react
+      run: npm ci
+    
+    - name: Build SDK
+      working-directory: ./sdks/react
+      run: npm run build
+    
+    - name: Set version from input (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      working-directory: ./sdks/react
+      run: npm version ${{ github.event.inputs.version }} --no-git-tag-version
+    
+    - name: Set version from tag (release)
+      if: github.event_name == 'release'
+      working-directory: ./sdks/react
+      run: |
+        VERSION=${GITHUB_REF#refs/tags/v}
+        npm version $VERSION --no-git-tag-version
+    
+    - name: Configure npm for publishing
+      run: |
+        echo "//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}" > ~/.npmrc
+        npm whoami
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Publish to NPM (workflow_dispatch)
+      if: github.event_name == 'workflow_dispatch'
+      working-directory: ./sdks/react
+      run: npm publish --access public --tag ${{ github.event.inputs.tag }}
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+    
+    - name: Publish to NPM (release)
+      if: github.event_name == 'release'
+      working-directory: ./sdks/react
+      run: |
+        if [[ "${{ github.event.release.prerelease }}" == "true" ]]; then
+          npm publish --access public --tag beta
+        else
+          npm publish --access public --tag latest
+        fi
+      env:
+        NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+
+  create-release-pr:
+    name: Create Release PR
+    needs: [publish-javascript, publish-react]
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+    
+    - name: Create Pull Request
+      uses: peter-evans/create-pull-request@v5
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        commit-message: 'chore: update package versions after release'
+        title: 'chore: update package versions after ${{ github.event.release.tag_name }} release'
+        body: |
+          This PR updates the package.json files after the npm release.
+          
+          Released version: ${{ github.event.release.tag_name }}
+          
+          - JavaScript SDK: @huefy/sdk
+          - React SDK: @huefy/react-sdk
+        branch: release/update-versions-${{ github.event.release.tag_name }}
+        delete-branch: true
