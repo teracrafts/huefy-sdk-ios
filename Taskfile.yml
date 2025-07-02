@@ -102,7 +102,7 @@ tasks:
   publish-dry-run:
     desc: "Dry run publish (shows what would be published without actually publishing)"
     cmds:
-      - echo "🧪 Dry run: Publishing all SDKs..."
+      - "{{.SCRIPTS_DIR}}/publish-all.sh --dry-run"
       - "{{.SCRIPTS_DIR}}/publish-all.sh --dry-run"
 
   # Release Workflow
@@ -124,7 +124,7 @@ tasks:
       - task: publish
       - echo "🏷️  Creating git tag and release..."
       - git add -A
-      - git commit -m "chore: release version {{.VERSION}}"
+      - "git commit -m \"chore: release version {{.VERSION}}\""
       - git tag "v{{.VERSION}}"
       - git push origin main
       - git push origin "v{{.VERSION}}"
@@ -138,7 +138,7 @@ tasks:
           echo "❌ VERSION is required. Usage: task release-dry-run VERSION=1.2.0"
           exit 1
         fi
-      - echo "🧪 Dry run: Release workflow for version {{.VERSION}}..."
+      - task: validate
       - task: validate
         vars: { VERSION: "{{.VERSION}}" }
       - echo "✅ Dry run completed. Run 'task release VERSION={{.VERSION}}' to execute."
@@ -250,17 +250,17 @@ tasks:
       - echo "💡 Use 'task test' to run all tests"
       - echo "💡 Use 'task test-<language>' to test specific SDK"
 
-  status:
-    desc: "Show project status and health"
-    cmds:
-      - echo "📊 {{.PROJECT_NAME}} Status"
-      - echo "==============================="
-      - git status --short
-      - echo ""
-      - echo "📦 SDK Status:"
-      - echo "JavaScript: $(cd sdks/javascript && [ -f package.json ] && echo '✅ Ready' || echo '❌ Missing')"
-      - echo "React:      $(cd sdks/react && [ -f package.json ] && echo '✅ Ready' || echo '❌ Missing')"
-      - echo "Go:         $(cd sdks/go && [ -f go.mod ] && echo '✅ Ready' || echo '❌ Missing')"
-      - echo "Java:       $(cd sdks/java && [ -f pom.xml ] && echo '✅ Ready' || echo '❌ Missing')"
-      - echo "Python:     $(cd sdks/python && [ -f pyproject.toml ] && echo '✅ Ready' || echo '❌ Missing')"
-      - echo "PHP:        $(cd sdks/php && [ -f composer.json ] && echo '✅ Ready' || echo '❌ Missing')"
+  #  status:
+#    desc: "Show project status and health"
+#    cmds:
+#      - echo "📊 {{.PROJECT_NAME}} Status"
+#      - echo "==============================="
+#      - git status --short
+#      - echo ""
+#      - echo "📦 SDK Status:"
+#      - echo "JavaScript: (Status check not available via Taskfile)"
+#      - echo "React:      (Status check not available via Taskfile)"
+#      - echo "Go:         (Status check not available via Taskfile)"
+#      - echo "Java:       (Status check not available via Taskfile)"
+#      - echo "Python:     (Status check not available via Taskfile)"
+#      - echo "PHP:        (Status check not available via Taskfile)"

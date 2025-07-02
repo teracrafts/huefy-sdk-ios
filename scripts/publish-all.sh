@@ -5,6 +5,11 @@
 
 set -e
 
+# Load environment variables from .env file if it exists
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(grep -v '^#' "$PROJECT_ROOT/.env" | xargs)
+fi
+
 DRY_RUN=false
 if [ "$1" = "--dry-run" ]; then
     DRY_RUN=true
