@@ -22,10 +22,10 @@ Huefy SDK provides production-ready libraries for App Mail Templates across mult
 |----------|---------|--------------|--------|
 | JavaScript/Node.js | [@teracrafts/huefy](./sdks/javascript/) | `npm install @teracrafts/huefy` | ✅ **Complete** |
 | React | [@teracrafts/huefy-react](./sdks/react/) | `npm install @teracrafts/huefy-react` | ✅ **Complete** |
-| Go | [github.com/huefy/huefy-sdk/go](./sdks/go/) | `go get github.com/huefy/huefy-sdk/go` | ✅ **Complete** |
-| Java | [com.huefy:huefy-java-sdk](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
-| Python | [huefy](./sdks/python/) | `pip install huefy` | ✅ **Complete** |
-| PHP | [huefy/php-sdk](./sdks/php/) | `composer require huefy/php-sdk` | ✅ **Complete** |
+| Go | [github.com/teracrafts/huefy-sdk/go](./sdks/go/) | `go get github.com/teracrafts/huefy-sdk/go` | ✅ **Complete** |
+| Java | [com.teracrafts:huefy](./sdks/java/) | Maven/Gradle | ✅ **Complete** |
+| Python | [teracrafts-huefy](./sdks/python/) | `pip install teracrafts-huefy` | ✅ **Complete** |
+| PHP | [teracrafts/huefy](./sdks/php/) | `composer require teracrafts/huefy` | ✅ **Complete** |
 
 ## Quick Start
 
@@ -89,7 +89,7 @@ import (
     "fmt"
     "log"
     
-    "github.com/huefy/huefy-sdk/sdks/go"
+    "github.com/teracrafts/huefy-sdk/go"
 )
 
 func main() {
@@ -116,10 +116,10 @@ func main() {
 
 ### Java
 ```java
-import com.huefy.sdk.HuefyClient;
-import com.huefy.sdk.models.SendEmailRequest;
-import com.huefy.sdk.models.SendEmailResponse;
-import com.huefy.sdk.models.EmailProvider;
+import com.teracrafts.huefy.HuefyClient;
+import com.teracrafts.huefy.models.SendEmailRequest;
+import com.teracrafts.huefy.models.SendEmailResponse;
+import com.teracrafts.huefy.models.EmailProvider;
 import java.util.Map;
 
 public class Example {
@@ -146,8 +146,8 @@ public class Example {
 
 ### Python
 ```python
-from huefy import HuefyClient
-from huefy.models import EmailProvider
+from teracrafts_huefy import HuefyClient
+from teracrafts_huefy.models import EmailProvider
 
 client = HuefyClient("your-api-key")
 
@@ -169,9 +169,9 @@ print(f"Email sent: {response.message_id}")
 <?php
 require_once 'vendor/autoload.php';
 
-use Huefy\SDK\HuefyClient;
-use Huefy\SDK\Models\SendEmailRequest;
-use Huefy\SDK\Models\EmailProvider;
+use Teracrafts\Huefy\HuefyClient;
+use Teracrafts\Huefy\Models\SendEmailRequest;
+use Teracrafts\Huefy\Models\EmailProvider;
 
 $client = new HuefyClient('your-api-key');
 
@@ -304,11 +304,11 @@ gh workflow run release.yml -f version=2.0.0-beta.1 -f prerelease=true
 
 The deployment pipeline publishes to:
 
-- **NPM**: `@huefy/sdk`, `@huefy/react-sdk`
-- **PyPI**: `huefy`
-- **Maven Central**: `dev.huefy:huefy-java-sdk`
-- **Packagist**: `huefy/huefy-sdk`
-- **Go Modules**: `github.com/huefy/huefy-sdk/sdks/go`
+- **NPM**: `@teracrafts/huefy`, `@teracrafts/huefy-react`
+- **PyPI**: `teracrafts-huefy`
+- **Maven Central**: `com.teracrafts:huefy`
+- **Packagist**: `teracrafts/huefy`
+- **Go Modules**: `github.com/teracrafts/huefy-sdk/go`
 
 ### Prerequisites
 
@@ -361,4 +361,4 @@ MIT License - see [LICENSE](./LICENSE) for details.
 - 📧 Email: support@huefy.com
 - 💬 Discord: [Join our community](https://discord.gg/huefy)
 - 📚 Documentation: [docs.huefy.com](https://docs.huefy.com)
-- 🐛 Issues: [GitHub Issues](https://github.com/huefy/huefy-sdk/issues)
+- 🐛 Issues: [GitHub Issues](https://github.com/teracrafts/huefy-sdk/issues)

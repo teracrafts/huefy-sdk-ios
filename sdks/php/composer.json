@@ -1,9 +1,9 @@
 {
-    "name": "huefy/huefy-sdk",
-    "description": "Official PHP SDK for the Huefy email sending platform",
+    "name": "teracrafts/huefy",
+    "description": "Official PHP SDK for Huefy - App Mail Templates with dynamic email sending",
     "type": "library",
     "keywords": ["huefy", "email", "api", "sdk", "template", "transactional"],
-    "homepage": "https://github.com/huefy/huefy-sdk",
+    "homepage": "https://github.com/teracrafts/huefy-sdk",
     "license": "MIT",
     "authors": [
         {
@@ -13,8 +13,8 @@
         }
     ],
     "support": {
-        "issues": "https://github.com/huefy/huefy-sdk/issues",
-        "source": "https://github.com/huefy/huefy-sdk",
+        "issues": "https://github.com/teracrafts/huefy-sdk/issues",
+        "source": "https://github.com/teracrafts/huefy-sdk",
         "docs": "https://docs.huefy.dev/sdk/php"
     },
     "require": {
