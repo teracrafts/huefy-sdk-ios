@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+Maven Settings Template for Central Publishing Portal
+
+SECURITY WARNING: This file contains credentials. Keep it secure!
+
+Instructions:
+1. Copy this file to ~/.m2/settings.xml
+2. Replace YOUR_GPG_PASSPHRASE with your actual GPG passphrase
+3. The username and password are already configured from your Central Portal account
+4. Never commit this file to version control
+
+To set up GPG:
+1. Install GPG: brew install gnupg
+2. Generate key: gpg --gen-key
+3. List keys: gpg --list-secret-keys --keyid-format LONG
+4. Upload to keyserver: gpg --keyserver keyserver.ubuntu.com --send-keys YOUR_KEY_ID
+-->
+<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"
+          xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+          xsi:schemaLocation="http://maven.apache.org/SETTINGS/1.0.0 
+                              http://maven.apache.org/xsd/settings-1.0.0.xsd">
+
+    <servers>
+        <!-- Central Publishing Portal Server -->
+        <server>
+            <id>central</id>
+            <username>k/XyzBcY</username>
+            <password>iAn5cQ3W0D4Qa8uJdQfvixrwmCQxJyMdjC7ElGwp4zbm</password>
+        </server>
+    </servers>
+
+    <profiles>
+        <profile>
+            <id>central</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <properties>
+                <!-- GPG Configuration -->
+                <gpg.executable>gpg</gpg.executable>
+                <gpg.passphrase>YOUR_GPG_PASSPHRASE</gpg.passphrase>
+                
+                <!-- Central Portal Configuration -->
+                <central.username>k/XyzBcY</central.username>
+                <central.password>iAn5cQ3W0D4Qa8uJdQfvixrwmCQxJyMdjC7ElGwp4zbm</central.password>
+            </properties>
+        </profile>
+    </profiles>
+
+    <activeProfiles>
+        <activeProfile>central</activeProfile>
+    </activeProfiles>
+
+</settings>

@@ -315,6 +315,31 @@ tasks:
         fi
       - "{{.SCRIPTS_DIR}}/deploy-java-subtree.sh {{.VERSION}}"
 
+  publish-java:
+    desc: "Publish Java SDK to Maven Central (usage: task publish-java VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task publish-java VERSION=1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/publish-maven-central.sh {{.VERSION}}"
+
+  java-release:
+    desc: "Complete Java SDK release workflow (usage: task java-release VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task java-release VERSION=1.0.0"
+          exit 1
+        fi
+      - echo "🚀 Starting Java SDK release workflow for version {{.VERSION}}..."
+      - task: deploy-java
+        vars: { VERSION: "{{.VERSION}}" }
+      - task: publish-java
+        vars: { VERSION: "{{.VERSION}}" }
+      - echo "✅ Java SDK v{{.VERSION}} released successfully!"
+
   #  status:
 #    desc: "Show project status and health"
 #    cmds:
