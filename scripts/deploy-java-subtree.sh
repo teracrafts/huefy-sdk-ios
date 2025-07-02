@@ -64,7 +64,7 @@ deploy_java() {
     local subtree_commit=$(git subtree split --prefix=sdks/java HEAD)
     
     print_status "Pushing to java-repo..."
-    git push java-repo ${subtree_commit}:main --force
+    git push java-repo ${subtree_commit}:refs/heads/main --force
     
     # Push tags if version specified
     if [ -n "$version" ]; then
