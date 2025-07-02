@@ -7,7 +7,7 @@ The official PHP SDK for the Huefy email sending platform. Send template-based e
 Install the SDK using Composer:
 
 ```bash
-composer require huefy/php-sdk
+composer require teracrafts/huefy
 ```
 
 ## Quick Start
@@ -284,5 +284,5 @@ This SDK is released under the MIT License. See [LICENSE](LICENSE) for details.
 ## Support
 
 - Documentation: [https://docs.huefy.com](https://docs.huefy.com)
-- Issues: [GitHub Issues](https://github.com/huefy/php-sdk/issues)
+- Issues: [GitHub Issues](https://github.com/teracrafts/huefy-sdk/issues)
 - Email: support@huefy.com
