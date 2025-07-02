@@ -28,7 +28,7 @@
         "phpunit/phpunit": "^10.0",
         "phpstan/phpstan": "^1.10",
         "psalm/plugin-phpunit": "^0.18",
-        "vimeo/psalm": "^5.0",
+        "vimeo/psalm": "^5.26",
         "friendsofphp/php-cs-fixer": "^3.0",
         "phpmd/phpmd": "^2.13",
         "squizlabs/php_codesniffer": "^3.7",
