@@ -335,6 +335,26 @@ tasks:
         fi
       - "{{.SCRIPTS_DIR}}/deploy-react-subtree.sh {{.VERSION}}"
 
+  deploy-python:
+    desc: "Deploy Python SDK to standalone repository (usage: task deploy-python VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-python VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-python-subtree.sh {{.VERSION}}"
+
+  deploy-javascript:
+    desc: "Deploy JavaScript SDK to standalone repository (usage: task deploy-javascript VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-javascript VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-javascript-subtree.sh {{.VERSION}}"
+
   publish-java:
     desc: "Publish Java SDK to Maven Central (usage: task publish-java VERSION=1.0.0)"
     cmds:
