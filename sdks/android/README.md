@@ -10,7 +10,7 @@ Add the dependency to your `build.gradle.kts`:
 
 ```kotlin
 dependencies {
-    implementation("com.teracrafts:huefy-sdk:1.0.0")
+    implementation("com.teracrafts:huefy-android:1.0.0")
 }
 ```
 
@@ -20,7 +20,7 @@ Add the dependency to your `build.gradle`:
 
 ```groovy
 dependencies {
-    implementation 'com.teracrafts:huefy-sdk:1.0.0'
+    implementation 'com.teracrafts:huefy-android:1.0.0'
 }
 ```
 
@@ -31,7 +31,7 @@ Add the dependency to your `pom.xml`:
 ```xml
 <dependency>
     <groupId>com.teracrafts</groupId>
-    <artifactId>huefy-sdk</artifactId>
+    <artifactId>huefy-android</artifactId>
     <version>1.0.0</version>
 </dependency>
 ```

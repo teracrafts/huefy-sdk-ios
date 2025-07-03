@@ -6,7 +6,7 @@ plugins {
 }
 
 group = 'com.teracrafts'
-archivesBaseName = 'huefy-sdk'
+archivesBaseName = 'huefy-android'
 version = '1.0.0'
 
 java {
