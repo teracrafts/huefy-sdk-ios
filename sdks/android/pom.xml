@@ -6,7 +6,7 @@
     
     <groupId>com.teracrafts</groupId>
     <artifactId>huefy-android</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
     
     <name>Huefy Android SDK</name>
@@ -41,11 +41,19 @@
         </repository>
     </distributionManagement>
     
+    <pluginRepositories>
+        <pluginRepository>
+            <id>central</id>
+            <url>https://repo.maven.apache.org/maven2</url>
+        </pluginRepository>
+    </pluginRepositories>
+    
     <properties>
         <maven.compiler.source>11</maven.compiler.source>
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.9.21</kotlin.version>
+        <dokka.version>1.9.10</dokka.version>
     </properties>
     
     <dependencies>
@@ -112,23 +120,19 @@
             
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.5.0</version>
-                <configuration>
-                    <doclint>none</doclint>
-                    <source>11</source>
-                    <javadocExecutable>\${java.home}/bin/javadoc</javadocExecutable>
-                    <additionalJOptions>
-                        <additionalJOption>-Xdoclint:none</additionalJOption>
-                        <additionalJOption>-quiet</additionalJOption>
-                    </additionalJOptions>
-                </configuration>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
                 <executions>
                     <execution>
-                        <id>attach-javadocs</id>
+                        <id>javadoc-jar</id>
+                        <phase>package</phase>
                         <goals>
                             <goal>jar</goal>
                         </goals>
+                        <configuration>
+                            <classifier>javadoc</classifier>
+                            <classesDirectory>${project.basedir}/src/main/javadoc</classesDirectory>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>

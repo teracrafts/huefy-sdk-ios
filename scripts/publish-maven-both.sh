@@ -121,7 +121,7 @@ publish_android_sdk() {
     
     <groupId>com.teracrafts</groupId>
     <artifactId>huefy-android</artifactId>
-    <version>1.0.2</version>
+    <version>1.0.4</version>
     <packaging>jar</packaging>
     
     <name>Huefy Android SDK</name>
@@ -161,6 +161,7 @@ publish_android_sdk() {
         <maven.compiler.target>11</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <kotlin.version>1.9.21</kotlin.version>
+        <dokka.version>1.9.10</dokka.version>
     </properties>
     
     <dependencies>
@@ -223,6 +224,26 @@ publish_android_sdk() {
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+            
+            <plugin>
+                <groupId>org.jetbrains.dokka</groupId>
+                <artifactId>dokka-maven-plugin</artifactId>
+                <version>${dokka.version}</version>
+                <executions>
+                    <execution>
+                        <phase>pre-site</phase>
+                        <goals>
+                            <goal>dokka</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <sourceDirectories>
+                        <dir>src/main/java</dir>
+                    </sourceDirectories>
+                    <outputDir>target/dokka</outputDir>
+                </configuration>
             </plugin>
             
             <plugin>
