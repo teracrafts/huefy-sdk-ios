@@ -49,7 +49,6 @@ import HuefySDK
 
 let config = HuefyConfiguration(
     apiKey: "your-api-key",
-    baseURL: URL(string: "https://api.huefy.com/api/v1/sdk")!,
     timeout: 30.0,
     retryAttempts: 3,
     retryDelay: 1.0
