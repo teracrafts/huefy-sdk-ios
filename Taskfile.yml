@@ -325,6 +325,16 @@ tasks:
         fi
       - "{{.SCRIPTS_DIR}}/deploy-go-subtree.sh {{.VERSION}}"
 
+  deploy-react:
+    desc: "Deploy React SDK to standalone repository (usage: task deploy-react VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-react VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-react-subtree.sh {{.VERSION}}"
+
   publish-java:
     desc: "Publish Java SDK to Maven Central (usage: task publish-java VERSION=1.0.0)"
     cmds:
