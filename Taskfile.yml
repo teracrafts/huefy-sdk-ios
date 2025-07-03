@@ -437,6 +437,16 @@ tasks:
         fi
       - "{{.SCRIPTS_DIR}}/publish-maven-central.sh {{.VERSION}}"
 
+  publish-maven:
+    desc: "Publish both Java and Android SDKs to Maven Central (usage: task publish-maven VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task publish-maven VERSION=1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/publish-maven-both.sh {{.VERSION}}"
+
   java-release:
     desc: "Complete Java SDK release workflow (usage: task java-release VERSION=1.0.0)"
     cmds:
@@ -451,6 +461,23 @@ tasks:
       - task: publish-java
         vars: { VERSION: "{{.VERSION}}" }
       - echo "✅ Java SDK v{{.VERSION}} released successfully!"
+
+  maven-release:
+    desc: "Complete Java and Android SDK release workflow to Maven Central (usage: task maven-release VERSION=1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task maven-release VERSION=1.0.0"
+          exit 1
+        fi
+      - echo "🚀 Starting Java and Android SDK release workflow for version {{.VERSION}}..."
+      - task: deploy-java
+        vars: { VERSION: "{{.VERSION}}" }
+      - task: deploy-android
+        vars: { VERSION: "{{.VERSION}}" }
+      - task: publish-maven
+        vars: { VERSION: "{{.VERSION}}" }
+      - echo "✅ Both Java and Android SDKs v{{.VERSION}} released successfully!"
 
   #  status:
 #    desc: "Show project status and health"
