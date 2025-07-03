@@ -68,7 +68,6 @@ import com.teracrafts.huefy.HuefyConfiguration
 
 val config = HuefyConfiguration(
     apiKey = "your-api-key",
-    baseUrl = "https://api.huefy.com/api/v1/sdk",
     timeout = 30_000,
     retryAttempts = 3,
     retryDelay = 1_000,
