@@ -121,7 +121,7 @@ publish_android_sdk() {
     
     <groupId>com.teracrafts</groupId>
     <artifactId>huefy-android</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
     
     <name>Huefy Android SDK</name>
@@ -232,6 +232,11 @@ publish_android_sdk() {
                 <configuration>
                     <doclint>none</doclint>
                     <source>11</source>
+                    <javadocExecutable>\${java.home}/bin/javadoc</javadocExecutable>
+                    <additionalJOptions>
+                        <additionalJOption>-Xdoclint:none</additionalJOption>
+                        <additionalJOption>-quiet</additionalJOption>
+                    </additionalJOptions>
                 </configuration>
                 <executions>
                     <execution>
