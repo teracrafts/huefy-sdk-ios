@@ -97,4 +97,17 @@ if [ -d "sdks/php" ]; then
     cd "$PROJECT_ROOT"
 fi
 
+# Build Laravel SDK
+if [ -d "sdks/laravel" ]; then
+    echo -e "${YELLOW}🔶 Building Laravel SDK...${NC}"
+    cd sdks/laravel
+    if [ -f "composer.json" ]; then
+        composer install
+        echo -e "${GREEN}✅ Laravel SDK built${NC}"
+    else
+        echo -e "${YELLOW}⚠️ Laravel SDK not yet implemented${NC}"
+    fi
+    cd "$PROJECT_ROOT"
+fi
+
 echo -e "${GREEN}🎉 Build process completed!${NC}"

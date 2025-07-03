@@ -81,6 +81,11 @@ clean_sdk "PHP" "sdks/php" \
     "rm -rf vendor/ composer.lock .phpunit.result.cache coverage/ build/" \
     "🐘"
 
+# Clean Laravel SDK
+clean_sdk "Laravel" "sdks/laravel" \
+    "rm -rf vendor/ composer.lock .phpunit.result.cache coverage/ build/" \
+    "🔶"
+
 # Clean project-wide artifacts
 echo -e "${BLUE}🗂️ Cleaning project-wide artifacts...${NC}"
 

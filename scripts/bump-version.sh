@@ -87,6 +87,14 @@ cd sdks/go
 echo "Go SDK uses git tags for versioning - no file changes needed"
 cd ../..
 
+echo "🔶 Updating Laravel SDK..."
+cd sdks/laravel
+backup_file composer.json
+if composer config version > /dev/null 2>&1; then
+    composer config version "$NEW_VERSION"
+fi
+cd ../..
+
 echo "✅ Version bump completed successfully!"
 echo ""
 echo "📋 Summary of changes:"
@@ -95,6 +103,7 @@ echo "- React SDK: package.json updated to $NEW_VERSION"
 echo "- Python SDK: pyproject.toml updated to $NEW_VERSION"
 echo "- Java SDK: pom.xml updated to $NEW_VERSION"
 echo "- PHP SDK: composer.json updated to $NEW_VERSION (if version field exists)"
+echo "- Laravel SDK: composer.json updated to $NEW_VERSION (if version field exists)"
 echo "- Go SDK: Uses git tags for versioning"
 echo ""
 echo "🔍 Next steps:"

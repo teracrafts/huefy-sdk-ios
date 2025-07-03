@@ -80,6 +80,9 @@ run_test "Python" "sdks/python" "python -m pytest -v" "🐍"
 # Test PHP SDK
 run_test "PHP" "sdks/php" "composer test" "🐘"
 
+# Test Laravel SDK
+run_test "Laravel" "sdks/laravel" "composer test" "🔶"
+
 # Summary
 echo ""
 echo -e "${BLUE}📊 Test Summary${NC}"

@@ -31,6 +31,8 @@ tasks:
       - cd sdks/python && pip install -e .
       - echo "🐘 Installing PHP SDK dependencies..."
       - cd sdks/php && composer install
+      - echo "🔶 Installing Laravel SDK dependencies..."
+      - cd sdks/laravel && composer install
       - echo "✅ Development environment setup complete!"
 
   generate:
@@ -78,6 +80,8 @@ tasks:
       - cd sdks/python && python -m flake8 huefy/ || echo "Python linting skipped"
       - echo "🐘 Linting PHP SDK..."
       - cd sdks/php && composer run lint || echo "PHP linting skipped"
+      - echo "🔶 Linting Laravel SDK..."
+      - cd sdks/laravel && composer run format || echo "Laravel linting skipped"
 
   # Version Management
   bump-version:
@@ -180,6 +184,12 @@ tasks:
     cmds:
       - composer build
 
+  build-laravel:
+    desc: "Build Laravel SDK only"
+    dir: sdks/laravel
+    cmds:
+      - composer install
+
   test-js:
     desc: "Test JavaScript SDK only"
     dir: sdks/javascript
@@ -213,6 +223,12 @@ tasks:
   test-php:
     desc: "Test PHP SDK only"
     dir: sdks/php
+    cmds:
+      - composer test
+
+  test-laravel:
+    desc: "Test Laravel SDK only"
+    dir: sdks/laravel
     cmds:
       - composer test
 
