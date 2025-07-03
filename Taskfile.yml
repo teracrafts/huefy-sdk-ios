@@ -33,6 +33,8 @@ tasks:
       - cd sdks/php && composer install
       - echo "🔶 Installing Laravel SDK dependencies..."
       - cd sdks/laravel && composer install
+      - echo "🍎 iOS SDK ready (no dependencies needed)..."
+      - echo "🤖 Android SDK ready (dependencies managed by Gradle)..."
       - echo "✅ Development environment setup complete!"
 
   generate:
@@ -190,6 +192,18 @@ tasks:
     cmds:
       - composer install
 
+  build-ios:
+    desc: "Build iOS SDK only"
+    dir: sdks/ios
+    cmds:
+      - swift build
+
+  build-android:
+    desc: "Build Android SDK only"
+    dir: sdks/android
+    cmds:
+      - ./gradlew build || gradle build
+
   test-js:
     desc: "Test JavaScript SDK only"
     dir: sdks/javascript
@@ -231,6 +245,18 @@ tasks:
     dir: sdks/laravel
     cmds:
       - composer test
+
+  test-ios:
+    desc: "Test iOS SDK only"
+    dir: sdks/ios
+    cmds:
+      - swift test
+
+  test-android:
+    desc: "Test Android SDK only"
+    dir: sdks/android
+    cmds:
+      - ./gradlew test || gradle test
 
   # Utility Tasks
   docs:
@@ -380,6 +406,26 @@ tasks:
           exit 1
         fi
       - "{{.SCRIPTS_DIR}}/deploy-laravel-subtree.sh {{.VERSION}}"
+
+  deploy-ios:
+    desc: "Deploy iOS SDK to standalone repository (usage: task deploy-ios VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-ios VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-ios-subtree.sh {{.VERSION}}"
+
+  deploy-android:
+    desc: "Deploy Android SDK to standalone repository (usage: task deploy-android VERSION=v1.0.0)"
+    cmds:
+      - |
+        if [ -z "{{.VERSION}}" ]; then
+          echo "❌ VERSION is required. Usage: task deploy-android VERSION=v1.0.0"
+          exit 1
+        fi
+      - "{{.SCRIPTS_DIR}}/deploy-android-subtree.sh {{.VERSION}}"
 
   publish-java:
     desc: "Publish Java SDK to Maven Central (usage: task publish-java VERSION=1.0.0)"

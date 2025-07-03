@@ -95,6 +95,18 @@ if composer config version > /dev/null 2>&1; then
 fi
 cd ../..
 
+echo "🍎 Updating iOS SDK..."
+cd sdks/ios
+# iOS uses git tags for Swift Package Manager - no file changes needed
+echo "iOS SDK uses git tags for versioning - no file changes needed"
+cd ../..
+
+echo "🤖 Updating Android SDK..."
+cd sdks/android
+backup_file build.gradle
+sed -i.backup "s/version = '.*'/version = '$NEW_VERSION'/" build.gradle
+cd ../..
+
 echo "✅ Version bump completed successfully!"
 echo ""
 echo "📋 Summary of changes:"
@@ -105,6 +117,8 @@ echo "- Java SDK: pom.xml updated to $NEW_VERSION"
 echo "- PHP SDK: composer.json updated to $NEW_VERSION (if version field exists)"
 echo "- Laravel SDK: composer.json updated to $NEW_VERSION (if version field exists)"
 echo "- Go SDK: Uses git tags for versioning"
+echo "- iOS SDK: Uses git tags for versioning"
+echo "- Android SDK: build.gradle updated to $NEW_VERSION"
 echo ""
 echo "🔍 Next steps:"
 echo "1. Review the changes: git diff"
