@@ -8,7 +8,6 @@ import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import okhttp3.logging.HttpLoggingInterceptor
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 import kotlin.math.pow
@@ -48,11 +47,12 @@ class HuefyClient(private val configuration: HuefyConfiguration) {
                 chain.proceed(request)
             }
         
-        if (configuration.enableLogging) {
-            val logging = HttpLoggingInterceptor()
-            logging.level = HttpLoggingInterceptor.Level.BODY
-            clientBuilder.addInterceptor(logging)
-        }
+        // Logging can be added if needed
+        // if (configuration.enableLogging) {
+        //     val logging = HttpLoggingInterceptor()
+        //     logging.level = HttpLoggingInterceptor.Level.BODY
+        //     clientBuilder.addInterceptor(logging)
+        // }
         
         httpClient = clientBuilder.build()
         moshi = Moshi.Builder()
