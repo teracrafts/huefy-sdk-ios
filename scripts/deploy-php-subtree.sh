@@ -36,7 +36,7 @@ print_error() {
 check_remote() {
     if ! git remote | grep -q "^php-repo$"; then
         print_status "Adding php-repo remote..."
-        git remote add php-repo git@github.com:teracrafts/teracrafts-huefy-sdk-php.git
+        git remote add php-repo git@github.com:teracrafts/huefy-sdk-php.git
     fi
 }
 
@@ -75,7 +75,7 @@ deploy_php() {
     
     print_success "PHP SDK deployed successfully!"
     echo
-    echo "Repository: https://github.com/teracrafts/teracrafts-huefy-sdk-php"
+    echo "Repository: https://github.com/teracrafts/huefy-sdk-php"
     echo "Packagist: Submit at https://packagist.org/packages/submit"
     echo
 }

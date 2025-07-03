@@ -6,7 +6,7 @@
 set -e
 
 # Configuration
-REMOTE_REPO="git@github.com:teracrafts/teracrafts-huefy-sdk-go.git"
+REMOTE_REPO="git@github.com:teracrafts/huefy-sdk-go.git"
 SUBDIRECTORY="sdks/go"
 VERSION=${1:-"v1.0.0"}
 
@@ -94,15 +94,15 @@ echo ""
 echo -e "${GREEN}🎉 Go SDK deployment completed successfully!${NC}"
 echo ""
 echo -e "${BLUE}📦 Package Information:${NC}"
-echo -e "${BLUE}   Module: github.com/teracrafts/teracrafts-huefy-sdk-go${NC}"
+echo -e "${BLUE}   Module: github.com/teracrafts/huefy-sdk-go${NC}"
 echo -e "${BLUE}   Version: $VERSION${NC}"
 echo -e "${BLUE}   Repository: $REMOTE_REPO${NC}"
 echo ""
 echo -e "${BLUE}📋 Usage Instructions:${NC}"
-echo -e "${BLUE}   go get github.com/teracrafts/teracrafts-huefy-sdk-go@$VERSION${NC}"
+echo -e "${BLUE}   go get github.com/teracrafts/huefy-sdk-go@$VERSION${NC}"
 echo ""
 echo -e "${BLUE}🔗 Repository URL:${NC}"
-echo -e "${BLUE}   https://github.com/teracrafts/teracrafts-huefy-sdk-go${NC}"
+echo -e "${BLUE}   https://github.com/teracrafts/huefy-sdk-go${NC}"
 
 # Cleanup
 git remote remove go-repo >/dev/null 2>&1 || true

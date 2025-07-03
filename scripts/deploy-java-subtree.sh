@@ -36,7 +36,7 @@ print_error() {
 check_remote() {
     if ! git remote | grep -q "^java-repo$"; then
         print_status "Adding java-repo remote..."
-        git remote add java-repo git@github.com:teracrafts/teracrafts-huefy-sdk-java.git
+        git remote add java-repo git@github.com:teracrafts/huefy-sdk-java.git
     fi
 }
 
@@ -75,7 +75,7 @@ deploy_java() {
     
     print_success "Java SDK deployed successfully!"
     echo
-    echo "Repository: https://github.com/teracrafts/teracrafts-huefy-sdk-java"
+    echo "Repository: https://github.com/teracrafts/huefy-sdk-java"
     echo
     echo "Next steps for Maven Central deployment:"
     echo "1. Clone the Java repository"
