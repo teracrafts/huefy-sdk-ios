@@ -120,7 +120,7 @@ final class HuefySDKTests: XCTestCase {
     func testDefaultConfiguration() {
         let config = HuefyConfiguration(apiKey: "test-key")
         XCTAssertEqual(config.apiKey, "test-key")
-        XCTAssertEqual(config.baseURL.absoluteString, "https://api.huefy.com/api/v1/sdk")
+        XCTAssertEqual(config.baseURL.absoluteString, "https://api.huefy.dev/api/v1/sdk")
         XCTAssertEqual(config.timeout, 30.0)
         XCTAssertEqual(config.retryAttempts, 3)
         XCTAssertEqual(config.retryDelay, 1.0)

@@ -13,7 +13,7 @@ public struct HuefyConfiguration {
     
     public init(
         apiKey: String,
-        baseURL: URL = URL(string: "https://api.huefy.com/api/v1/sdk")!,
+        baseURL: URL = URL(string: "https://api.huefy.dev/api/v1/sdk")!,
         timeout: TimeInterval = 30.0,
         retryAttempts: Int = 3,
         retryDelay: TimeInterval = 1.0
