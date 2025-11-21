@@ -5,21 +5,37 @@ import Combine
 
 /// Configuration for the Huefy client
 public struct HuefyConfiguration {
+    /// Production and local endpoints
+    public static let productionHTTPEndpoint = "https://api.huefy.dev/api/v1/sdk"
+    public static let localHTTPEndpoint = "http://localhost:8080/api/v1/sdk"
+
     public let apiKey: String
-    public let baseURL: URL
+    public let customBaseURL: URL?
+    public let local: Bool
     public let timeout: TimeInterval
     public let retryAttempts: Int
     public let retryDelay: TimeInterval
-    
+
+    /// The resolved base URL based on configuration
+    public var baseURL: URL {
+        if let custom = customBaseURL {
+            return custom
+        }
+        let urlString = local ? Self.localHTTPEndpoint : Self.productionHTTPEndpoint
+        return URL(string: urlString)!
+    }
+
     public init(
         apiKey: String,
-        baseURL: URL = URL(string: "https://api.huefy.dev/api/v1/sdk")!,
+        baseURL: URL? = nil,
+        local: Bool = false,
         timeout: TimeInterval = 30.0,
         retryAttempts: Int = 3,
         retryDelay: TimeInterval = 1.0
     ) {
         self.apiKey = apiKey
-        self.baseURL = baseURL
+        self.customBaseURL = baseURL
+        self.local = local
         self.timeout = timeout
         self.retryAttempts = retryAttempts
         self.retryDelay = retryDelay
