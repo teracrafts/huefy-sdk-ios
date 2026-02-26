@@ -75,15 +75,15 @@ final class HttpClient: @unchecked Sendable {
 
         // Request signing
         if config.enableRequestSigning {
-            let timestamp = String(Int(Date().timeIntervalSince1970))
+            let timestamp = String(Int(Date().timeIntervalSince1970 * 1000))
             urlRequest.setValue(timestamp, forHTTPHeaderField: "X-Timestamp")
             urlRequest.setValue(
                 String(apiKey.prefix(8)),
                 forHTTPHeaderField: "X-Key-Id"
             )
-            let payload = [method, fullPath, timestamp, body.map { String(data: $0, encoding: .utf8) ?? "" } ?? ""]
-                .joined(separator: "\n")
-            let signature = Security.generateHMACSHA256(message: payload, key: apiKey)
+            let bodyString = body.flatMap { String(data: $0, encoding: .utf8) } ?? ""
+            let message = "\(timestamp).\(bodyString)"
+            let signature = Security.generateHMACSHA256(message: message, key: apiKey)
             urlRequest.setValue(signature, forHTTPHeaderField: "X-Signature")
         }
 
@@ -96,10 +96,13 @@ final class HttpClient: @unchecked Sendable {
             urlRequest.httpBody = body
         }
 
+        // Capture as immutable for Sendable closure
+        let finalRequest = urlRequest
+
         // Execute with retry + circuit breaker
         return try await retryHandler.execute { [self] in
             try await circuitBreaker.execute {
-                try await self.performRequest(urlRequest, method: method, path: fullPath)
+                try await self.performRequest(finalRequest, method: method, path: fullPath)
             }
         }
     }
@@ -112,6 +115,12 @@ final class HttpClient: @unchecked Sendable {
     }
 
     // MARK: - Private
+
+    /// Sanitises an error message if error sanitisation is enabled in the config.
+    private func sanitize(_ message: String) -> String {
+        guard config.enableErrorSanitization else { return message }
+        return sanitizeErrorMessage(message)
+    }
 
     private func performRequest(
         _ request: URLRequest,
@@ -127,22 +136,22 @@ final class HttpClient: @unchecked Sendable {
             switch error.code {
             case .timedOut:
                 throw HuefyError.timeoutError(
-                    "Request to \(method) \(path) timed out after \(Int(timeout))s"
+                    sanitize("Request to \(method) \(path) timed out after \(Int(timeout))s")
                 )
             case .notConnectedToInternet, .networkConnectionLost:
                 throw HuefyError.networkError(
-                    "Network error during \(method) \(path)",
+                    sanitize("Network error during \(method) \(path)"),
                     cause: error
                 )
             default:
                 throw HuefyError.networkError(
-                    "Request failed: \(error.localizedDescription)",
+                    sanitize("Request failed: \(error.localizedDescription)"),
                     cause: error
                 )
             }
         } catch {
             throw HuefyError.networkError(
-                "Unexpected error during \(method) \(path)",
+                sanitize("Unexpected error during \(method) \(path)"),
                 cause: error
             )
         }
@@ -150,7 +159,7 @@ final class HttpClient: @unchecked Sendable {
         guard let httpResponse = response as? HTTPURLResponse else {
             throw HuefyError(
                 code: .networkError,
-                message: "Invalid response type"
+                message: sanitize("Invalid response type")
             )
         }
 
@@ -158,7 +167,19 @@ final class HttpClient: @unchecked Sendable {
 
         guard (200...299).contains(statusCode) else {
             let bodyString = String(data: data, encoding: .utf8)
-            throw HuefyError.fromResponse(statusCode: statusCode, body: bodyString)
+            let rawError = HuefyError.fromResponse(statusCode: statusCode, body: bodyString)
+            if config.enableErrorSanitization {
+                throw HuefyError(
+                    code: rawError.code,
+                    message: sanitizeErrorMessage(rawError.message),
+                    cause: rawError.cause,
+                    statusCode: rawError.statusCode,
+                    retryAfter: rawError.retryAfter,
+                    requestId: rawError.requestId,
+                    details: rawError.details
+                )
+            }
+            throw rawError
         }
 
         // 204 No Content
