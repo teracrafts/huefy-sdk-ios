@@ -146,7 +146,7 @@ public enum Security {
     // MARK: - Payload Signing
 
     /// Signed payload containing data, signature, timestamp, and key identifier.
-    public struct SignedPayload: Sendable {
+    public struct SignedPayload: @unchecked Sendable {
         public let data: Any
         public let signature: String
         public let timestamp: Int
