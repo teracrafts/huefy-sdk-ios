@@ -18,8 +18,11 @@ public struct RetryConfig: Sendable {
         maxRetries: Int = 3,
         baseDelay: TimeInterval = 1.0,
         maxDelay: TimeInterval = 30.0,
-        retryableStatusCodes: [Int] = [429, 500, 502, 503, 504]
+        retryableStatusCodes: [Int] = [408, 429, 500, 502, 503, 504]
     ) {
+        precondition(maxRetries >= 0, "maxRetries must be >= 0")
+        precondition(baseDelay > 0, "baseDelay must be > 0")
+        precondition(maxDelay >= baseDelay, "maxDelay must be >= baseDelay")
         self.maxRetries = maxRetries
         self.baseDelay = baseDelay
         self.maxDelay = maxDelay
@@ -43,6 +46,8 @@ public struct CircuitBreakerConfig: Sendable {
         resetTimeout: TimeInterval = 30.0,
         halfOpenRequests: Int = 1
     ) {
+        precondition(failureThreshold >= 1, "failureThreshold must be >= 1")
+        precondition(resetTimeout > 0, "resetTimeout must be > 0")
         self.failureThreshold = failureThreshold
         self.resetTimeout = resetTimeout
         self.halfOpenRequests = halfOpenRequests
@@ -93,6 +98,9 @@ public struct HuefyConfig: Sendable {
     /// Enable sanitisation of sensitive data in error messages.
     public var enableErrorSanitization: Bool
 
+    /// Optional logger for SDK diagnostics. Defaults to `nil` (no logging).
+    public var logger: (any HuefyLogger)?
+
     public init(
         apiKey: String,
         baseUrl: String? = nil,
@@ -101,7 +109,8 @@ public struct HuefyConfig: Sendable {
         circuitBreakerConfig: CircuitBreakerConfig = CircuitBreakerConfig(),
         secondaryApiKey: String? = nil,
         enableRequestSigning: Bool = false,
-        enableErrorSanitization: Bool = false
+        enableErrorSanitization: Bool = true,
+        logger: (any HuefyLogger)? = nil
     ) {
         self.apiKey = apiKey
         self.baseUrl = baseUrl ?? resolveBaseUrl()
@@ -111,5 +120,6 @@ public struct HuefyConfig: Sendable {
         self.secondaryApiKey = secondaryApiKey
         self.enableRequestSigning = enableRequestSigning
         self.enableErrorSanitization = enableErrorSanitization
+        self.logger = logger
     }
 }
