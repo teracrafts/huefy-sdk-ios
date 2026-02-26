@@ -64,13 +64,22 @@ struct RetryHandler: Sendable {
 
     // MARK: - Helpers
 
-    /// Returns `true` when the error is eligible for retry based on its HTTP
-    /// status code.
+    /// Returns `true` when the error is eligible for retry based on its error
+    /// code, recoverability, or HTTP status code.
     func isRetryable(_ error: Error) -> Bool {
-        guard let sdkError = error as? HuefyError,
-              let statusCode = sdkError.statusCode else {
-            return false
+        guard let sdkError = error as? HuefyError else { return false }
+
+        // Network and timeout errors are always retryable
+        if sdkError.code == .networkError || sdkError.code == .networkTimeout {
+            return true
         }
+
+        // Also retry if explicitly marked recoverable
+        if sdkError.isRecoverable {
+            return true
+        }
+
+        guard let statusCode = sdkError.statusCode else { return false }
         return config.retryableStatusCodes.contains(statusCode)
     }
 
@@ -80,7 +89,8 @@ struct RetryHandler: Sendable {
     /// - Parameter attempt: Zero-based attempt index (0 = first retry).
     /// - Returns: Delay in seconds.
     func calculateDelay(attempt: Int) -> TimeInterval {
-        let exponential = config.baseDelay * pow(2.0, Double(attempt))
+        let cappedAttempt = min(attempt, 30)
+        let exponential = config.baseDelay * pow(2.0, Double(cappedAttempt))
         let capped = min(exponential, config.maxDelay)
 
         // Apply +/-25% jitter: factor in [0.75, 1.25)
