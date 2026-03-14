@@ -30,6 +30,7 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
     private let httpClient: HttpClient
     private let config: HuefyConfig
+    private var _closed: Bool = false
 
     // MARK: - Initialisation
 
@@ -88,6 +89,10 @@ public final class HuefyEmailClient: @unchecked Sendable {
         recipient: String,
         provider: EmailProvider?
     ) async throws -> SendEmailResponse {
+        guard !_closed else {
+            throw HuefyError(code: .initFailed, message: "Client has been closed")
+        }
+
         let errors = EmailValidators.validateSendEmailInput(
             templateKey: templateKey,
             data: data,
@@ -134,6 +139,10 @@ public final class HuefyEmailClient: @unchecked Sendable {
     /// - Returns: An array of ``BulkEmailResult`` for each email.
     /// - Throws: A ``HuefyError`` if bulk count validation fails.
     public func sendBulkEmails(_ requests: [SendEmailRequest]) async throws -> [BulkEmailResult] {
+        guard !_closed else {
+            throw HuefyError(code: .initFailed, message: "Client has been closed")
+        }
+
         if let err = EmailValidators.validateBulkCount(requests.count) {
             throw HuefyError(
                 code: .validationError,
@@ -167,6 +176,16 @@ public final class HuefyEmailClient: @unchecked Sendable {
                         code: error.code.rawValue
                     )
                 ))
+            } catch {
+                results.append(BulkEmailResult(
+                    email: request.recipient,
+                    success: false,
+                    result: nil,
+                    error: BulkEmailError(
+                        message: error.localizedDescription,
+                        code: ErrorCode.networkError.rawValue
+                    )
+                ))
             }
         }
 
@@ -187,6 +206,7 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
     /// Releases any resources held by the client.
     public func close() {
+        _closed = true
         httpClient.close()
     }
 }
