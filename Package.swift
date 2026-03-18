@@ -19,6 +19,11 @@ let package = Package(
             name: "Huefy",
             path: "Sources/Huefy"
         ),
+        .executableTarget(
+            name: "SdkLab",
+            dependencies: ["Huefy"],
+            path: "Sources/SdkLab"
+        ),
         .testTarget(
             name: "HuefyTests",
             dependencies: ["Huefy"],
