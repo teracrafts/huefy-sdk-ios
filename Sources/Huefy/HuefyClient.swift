@@ -1,12 +1,5 @@
 import Foundation
 
-/// Response returned by the health check endpoint.
-public struct HealthResponse: Codable, Sendable {
-    public let status: String
-    public let timestamp: String
-    public let version: String?
-}
-
 /// Main client for the Huefy Swift SDK.
 ///
 /// Create an instance with a ``HuefyConfig`` and use it to interact with
