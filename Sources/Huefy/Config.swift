@@ -1,5 +1,15 @@
 import Foundation
 
+/// Parsed rate-limit header values from an API response.
+public struct RateLimitInfo: Sendable {
+    /// The request limit as reported by the server.
+    public let limit: Int
+    /// The number of remaining requests in the current window.
+    public let remaining: Int
+    /// The time at which the current rate-limit window resets.
+    public let resetAt: Date
+}
+
 /// Configuration for retry behaviour on failed requests.
 public struct RetryConfig: Sendable {
     /// Maximum number of retry attempts. Default: 3.
@@ -101,6 +111,12 @@ public struct HuefyConfig: Sendable {
     /// Optional logger for SDK diagnostics. Defaults to `nil` (no logging).
     public var logger: (any HuefyLogger)?
 
+    /// Optional callback invoked with rate-limit info after every successful response.
+    public var onRateLimitUpdate: (@Sendable (RateLimitInfo) -> Void)?
+
+    /// Optional callback invoked when remaining requests drop below 20% of the limit.
+    public var onRateLimitWarning: (@Sendable (RateLimitInfo) -> Void)?
+
     public init(
         apiKey: String,
         baseUrl: String? = nil,
@@ -110,7 +126,9 @@ public struct HuefyConfig: Sendable {
         secondaryApiKey: String? = nil,
         enableRequestSigning: Bool = false,
         enableErrorSanitization: Bool = true,
-        logger: (any HuefyLogger)? = nil
+        logger: (any HuefyLogger)? = nil,
+        onRateLimitUpdate: (@Sendable (RateLimitInfo) -> Void)? = nil,
+        onRateLimitWarning: (@Sendable (RateLimitInfo) -> Void)? = nil
     ) {
         self.apiKey = apiKey
         self.baseUrl = baseUrl ?? resolveBaseUrl()
@@ -121,5 +139,7 @@ public struct HuefyConfig: Sendable {
         self.enableRequestSigning = enableRequestSigning
         self.enableErrorSanitization = enableErrorSanitization
         self.logger = logger
+        self.onRateLimitUpdate = onRateLimitUpdate
+        self.onRateLimitWarning = onRateLimitWarning
     }
 }
