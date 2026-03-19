@@ -26,7 +26,7 @@ import Foundation
 public final class HuefyEmailClient: @unchecked Sendable {
 
     private static let emailsSendPath = "/emails/send"
-    private static let emailsBulkPath = "/emails/bulk"
+    private static let emailsBulkPath = "/emails/send-bulk"
 
     private let httpClient: HttpClient
     private let config: HuefyConfig
@@ -130,66 +130,57 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
     // MARK: - Bulk Emails
 
-    /// Sends multiple emails in bulk.
+    /// Sends multiple emails in bulk using a shared template.
     ///
-    /// Each request is sent independently. Failures for individual emails
-    /// do not prevent remaining emails from being sent.
-    ///
-    /// - Parameter requests: The list of email requests to send.
-    /// - Returns: An array of ``BulkEmailResult`` for each email.
-    /// - Throws: A ``HuefyError`` if bulk count validation fails.
-    public func sendBulkEmails(_ requests: [SendEmailRequest]) async throws -> [BulkEmailResult] {
+    /// - Parameters:
+    ///   - templateKey: The template key to use for all recipients.
+    ///   - recipients: The list of recipients to send to.
+    ///   - options: Optional bulk send options (fromEmail, fromName, providerType, etc.).
+    /// - Returns: A ``SendBulkEmailsResponse`` describing the batch result.
+    /// - Throws: A ``HuefyError`` on validation or network failures.
+    public func sendBulkEmails(
+        templateKey: String,
+        recipients: [BulkRecipient],
+        options: BulkEmailOptions? = nil
+    ) async throws -> SendBulkEmailsResponse {
         guard !_closed else {
             throw HuefyError(code: .initFailed, message: "Client has been closed")
         }
 
-        if let err = EmailValidators.validateBulkCount(requests.count) {
+        if let err = EmailValidators.validateBulkCount(recipients.count) {
             throw HuefyError(
                 code: .validationError,
                 message: err
             )
         }
 
-        var results: [BulkEmailResult] = []
-
-        for request in requests {
-            do {
-                let response = try await sendEmail(
-                    templateKey: request.templateKey,
-                    data: request.data,
-                    recipient: request.recipient,
-                    provider: request.providerType
-                )
-                results.append(BulkEmailResult(
-                    email: request.recipient,
-                    success: true,
-                    result: response,
-                    error: nil
-                ))
-            } catch let error as HuefyError {
-                results.append(BulkEmailResult(
-                    email: request.recipient,
-                    success: false,
-                    result: nil,
-                    error: BulkEmailError(
-                        message: error.message,
-                        code: error.code.rawValue
-                    )
-                ))
-            } catch {
-                results.append(BulkEmailResult(
-                    email: request.recipient,
-                    success: false,
-                    result: nil,
-                    error: BulkEmailError(
-                        message: error.localizedDescription,
-                        code: ErrorCode.networkError.rawValue
-                    )
-                ))
-            }
+        if let err = EmailValidators.validateTemplateKey(templateKey) {
+            throw HuefyError(
+                code: .validationError,
+                message: err
+            )
         }
 
-        return results
+        let request = SendBulkEmailsRequest(
+            templateKey: templateKey.trimmingCharacters(in: .whitespaces),
+            recipients: recipients,
+            fromEmail: options?.fromEmail,
+            fromName: options?.fromName,
+            providerType: options?.providerType,
+            batchSize: options?.batchSize,
+            correlationId: options?.correlationId
+        )
+
+        let encoder = JSONEncoder()
+        let body = try encoder.encode(request)
+        let responseData = try await httpClient.request(
+            method: "POST",
+            path: Self.emailsBulkPath,
+            body: body
+        )
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(SendBulkEmailsResponse.self, from: responseData)
     }
 
     // MARK: - Health Check
