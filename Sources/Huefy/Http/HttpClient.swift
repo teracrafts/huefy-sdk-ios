@@ -187,6 +187,31 @@ final class HttpClient: @unchecked Sendable {
             return Data("{}".utf8)
         }
 
+        parseRateLimitHeaders(httpResponse)
+
         return data
+    }
+
+    private func parseRateLimitHeaders(_ response: HTTPURLResponse) {
+        guard
+            let limitStr    = response.value(forHTTPHeaderField: "X-RateLimit-Limit"),
+            let remainingStr = response.value(forHTTPHeaderField: "X-RateLimit-Remaining"),
+            let resetStr    = response.value(forHTTPHeaderField: "X-RateLimit-Reset"),
+            let limit       = Int(limitStr),
+            let remaining   = Int(remainingStr),
+            let resetSecs   = TimeInterval(resetStr)
+        else { return }
+
+        let info = RateLimitInfo(
+            limit: limit,
+            remaining: remaining,
+            resetAt: Date(timeIntervalSince1970: resetSecs)
+        )
+
+        config.onRateLimitUpdate?(info)
+
+        if limit > 0 && remaining < Int(Double(limit) * 0.2) {
+            config.onRateLimitWarning?(info)
+        }
     }
 }
