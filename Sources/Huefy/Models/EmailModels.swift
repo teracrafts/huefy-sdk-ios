@@ -34,48 +34,127 @@ public struct SendEmailRequest: Codable, Sendable {
     }
 }
 
+/// Status of a single recipient in an email send or bulk send operation.
+public struct RecipientStatus: Codable, Sendable {
+    public let email: String
+    public let status: String
+    public let messageId: String?
+    public let error: String?
+    public let sentAt: String?
+}
+
+/// Data payload from the send email response.
+public struct SendEmailResponseData: Codable, Sendable {
+    public let emailId: String
+    public let status: String
+    public let recipients: [RecipientStatus]
+    public let scheduledAt: String?
+    public let sentAt: String?
+}
+
 /// Response from the send email endpoint.
 public struct SendEmailResponse: Codable, Sendable {
-    /// Whether the email was sent successfully.
     public let success: Bool
+    public let data: SendEmailResponseData
+    public let correlationId: String
+}
 
-    /// A human-readable message from the server.
-    public let message: String?
+/// A recipient entry for bulk email sending.
+public struct BulkRecipient: Codable, Sendable {
+    public let email: String
+    public let type: String
+    public let data: [String: String]?
 
-    /// The unique identifier for the sent message.
-    public let messageId: String?
-
-    /// The provider that was used to deliver the email.
-    public let provider: String?
-
-    enum CodingKeys: String, CodingKey {
-        case success
-        case message
-        case messageId = "message_id"
-        case provider
+    public init(email: String, type: String = "to", data: [String: String]? = nil) {
+        self.email = email
+        self.type = type
+        self.data = data
     }
 }
 
-/// Error details for a single email in a bulk operation.
-public struct BulkEmailError: Codable, Sendable {
-    /// Error message describing what went wrong.
-    public let message: String
+/// Request body for the send-bulk endpoint.
+public struct SendBulkEmailsRequest: Codable, Sendable {
+    public let templateKey: String
+    public let recipients: [BulkRecipient]
+    public let fromEmail: String?
+    public let fromName: String?
+    public let providerType: String?
+    public let batchSize: Int?
+    public let correlationId: String?
 
-    /// Error code string.
-    public let code: String
+    public init(
+        templateKey: String,
+        recipients: [BulkRecipient],
+        fromEmail: String? = nil,
+        fromName: String? = nil,
+        providerType: String? = nil,
+        batchSize: Int? = nil,
+        correlationId: String? = nil
+    ) {
+        self.templateKey = templateKey
+        self.recipients = recipients
+        self.fromEmail = fromEmail
+        self.fromName = fromName
+        self.providerType = providerType
+        self.batchSize = batchSize
+        self.correlationId = correlationId
+    }
 }
 
-/// Result of sending a single email in a bulk operation.
-public struct BulkEmailResult: Codable, Sendable {
-    /// The recipient email address.
-    public let email: String
+/// Data payload from the send-bulk response.
+public struct SendBulkEmailsResponseData: Codable, Sendable {
+    public let batchId: String
+    public let status: String
+    public let templateKey: String
+    public let totalRecipients: Int
+    public let successCount: Int
+    public let failureCount: Int
+    public let suppressedCount: Int
+    public let startedAt: String
+    public let completedAt: String?
+    public let recipients: [RecipientStatus]
+}
 
-    /// Whether this individual email was sent successfully.
+/// Response from the send-bulk endpoint.
+public struct SendBulkEmailsResponse: Codable, Sendable {
     public let success: Bool
+    public let data: SendBulkEmailsResponseData
+    public let correlationId: String
+}
 
-    /// The response if the email was sent successfully.
-    public let result: SendEmailResponse?
+/// Options for bulk email sending.
+public struct BulkEmailOptions: Sendable {
+    public let fromEmail: String?
+    public let fromName: String?
+    public let providerType: String?
+    public let batchSize: Int?
+    public let correlationId: String?
 
-    /// The error if the email failed to send.
-    public let error: BulkEmailError?
+    public init(
+        fromEmail: String? = nil,
+        fromName: String? = nil,
+        providerType: String? = nil,
+        batchSize: Int? = nil,
+        correlationId: String? = nil
+    ) {
+        self.fromEmail = fromEmail
+        self.fromName = fromName
+        self.providerType = providerType
+        self.batchSize = batchSize
+        self.correlationId = correlationId
+    }
+}
+
+/// Data payload from the health check response.
+public struct HealthResponseData: Codable, Sendable {
+    public let status: String
+    public let timestamp: String
+    public let version: String
+}
+
+/// Response from the health check endpoint.
+public struct HealthResponse: Codable, Sendable {
+    public let success: Bool
+    public let data: HealthResponseData
+    public let correlationId: String
 }
