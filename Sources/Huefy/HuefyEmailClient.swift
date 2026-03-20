@@ -161,6 +161,15 @@ public final class HuefyEmailClient: @unchecked Sendable {
             )
         }
 
+        for (i, recipient) in recipients.enumerated() {
+            if let err = EmailValidators.validateEmail(recipient.email) {
+                throw HuefyError(
+                    code: .validationError,
+                    message: "recipients[\(i)]: \(err)"
+                )
+            }
+        }
+
         let request = SendBulkEmailsRequest(
             templateKey: templateKey.trimmingCharacters(in: .whitespaces),
             recipients: recipients,
