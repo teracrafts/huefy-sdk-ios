@@ -15,7 +15,7 @@ public enum EmailValidators {
     public static let maxTemplateKeyLength = 100
 
     /// Maximum number of emails in a single bulk request.
-    public static let maxBulkEmails = 100
+    public static let maxBulkEmails = 1000
 
     // MARK: - Individual Validators
 
