@@ -15,10 +15,10 @@ public struct RetryConfig: Sendable {
     /// Maximum number of retry attempts. Default: 3.
     public var maxRetries: Int
 
-    /// Base delay between retries in seconds. Default: 1.0.
+    /// Base delay between retries in seconds. Default: 0.5.
     public var baseDelay: TimeInterval
 
-    /// Maximum delay between retries in seconds. Default: 30.0.
+    /// Maximum delay between retries in seconds. Default: 10.0.
     public var maxDelay: TimeInterval
 
     /// HTTP status codes that trigger a retry.
@@ -26,8 +26,8 @@ public struct RetryConfig: Sendable {
 
     public init(
         maxRetries: Int = 3,
-        baseDelay: TimeInterval = 1.0,
-        maxDelay: TimeInterval = 30.0,
+        baseDelay: TimeInterval = 0.5,
+        maxDelay: TimeInterval = 10.0,
         retryableStatusCodes: [Int] = [408, 429, 500, 502, 503, 504]
     ) {
         precondition(maxRetries >= 0, "maxRetries must be >= 0")
