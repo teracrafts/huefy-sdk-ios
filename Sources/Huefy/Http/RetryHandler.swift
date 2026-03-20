@@ -84,7 +84,7 @@ struct RetryHandler: Sendable {
     }
 
     /// Calculates the delay for a given retry attempt using exponential
-    /// backoff with +/-25% jitter.
+    /// backoff with +/-20% jitter.
     ///
     /// - Parameter attempt: Zero-based attempt index (0 = first retry).
     /// - Returns: Delay in seconds.
@@ -93,8 +93,8 @@ struct RetryHandler: Sendable {
         let exponential = config.baseDelay * pow(2.0, Double(cappedAttempt))
         let capped = min(exponential, config.maxDelay)
 
-        // Apply +/-25% jitter: factor in [0.75, 1.25)
-        let jitterFactor = 0.75 + Double.random(in: 0..<0.5)
+        // Apply +/-20% jitter: factor in [0.8, 1.2)
+        let jitterFactor = 0.8 + Double.random(in: 0..<0.4)
         return capped * jitterFactor
     }
 }
