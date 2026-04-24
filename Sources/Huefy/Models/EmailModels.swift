@@ -5,31 +5,31 @@ public struct SendEmailRequest: Codable, Sendable {
     /// The template key identifying the email template (1-100 characters).
     public let templateKey: String
 
-    /// The recipient email address.
-    public let recipient: String
-
     /// Template data variables to merge into the email.
     public let data: [String: String]
+
+    /// The recipient email address.
+    public let recipient: String
 
     /// The email provider to use. Defaults to SES if not specified.
     public let providerType: EmailProvider?
 
     public init(
         templateKey: String,
-        recipient: String,
         data: [String: String],
+        recipient: String,
         providerType: EmailProvider? = nil
     ) {
         self.templateKey = templateKey
-        self.recipient = recipient
         self.data = data
+        self.recipient = recipient
         self.providerType = providerType
     }
 
     enum CodingKeys: String, CodingKey {
         case templateKey = "template_key"
-        case recipient
         case data
+        case recipient
         case providerType = "provider_type"
     }
 }
@@ -76,28 +76,16 @@ public struct BulkRecipient: Codable, Sendable {
 public struct SendBulkEmailsRequest: Codable, Sendable {
     public let templateKey: String
     public let recipients: [BulkRecipient]
-    public let fromEmail: String?
-    public let fromName: String?
-    public let providerType: String?
-    public let batchSize: Int?
-    public let correlationId: String?
+    public let providerType: EmailProvider?
 
     public init(
         templateKey: String,
         recipients: [BulkRecipient],
-        fromEmail: String? = nil,
-        fromName: String? = nil,
-        providerType: String? = nil,
-        batchSize: Int? = nil,
-        correlationId: String? = nil
+        providerType: EmailProvider? = nil
     ) {
         self.templateKey = templateKey
         self.recipients = recipients
-        self.fromEmail = fromEmail
-        self.fromName = fromName
         self.providerType = providerType
-        self.batchSize = batchSize
-        self.correlationId = correlationId
     }
 }
 
@@ -122,28 +110,6 @@ public struct SendBulkEmailsResponse: Codable, Sendable {
     public let correlationId: String
 }
 
-/// Options for bulk email sending.
-public struct BulkEmailOptions: Sendable {
-    public let fromEmail: String?
-    public let fromName: String?
-    public let providerType: String?
-    public let batchSize: Int?
-    public let correlationId: String?
-
-    public init(
-        fromEmail: String? = nil,
-        fromName: String? = nil,
-        providerType: String? = nil,
-        batchSize: Int? = nil,
-        correlationId: String? = nil
-    ) {
-        self.fromEmail = fromEmail
-        self.fromName = fromName
-        self.providerType = providerType
-        self.batchSize = batchSize
-        self.correlationId = correlationId
-    }
-}
 
 /// Data payload from the health check response.
 public struct HealthResponseData: Codable, Sendable {
