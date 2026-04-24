@@ -15,12 +15,10 @@ import Foundation
 ///     recipient: "john@example.com"
 /// )
 ///
-/// // Send with a specific provider
-/// let response = try await client.sendEmail(
+/// // Bulk emails
+/// let bulk = try await client.sendBulkEmails(
 ///     templateKey: "welcome",
-///     data: ["name": "John"],
-///     recipient: "john@example.com",
-///     provider: .sendgrid
+///     recipients: [BulkRecipient(email: "alice@example.com", data: ["name": "Alice"])]
 /// )
 /// ```
 public final class HuefyEmailClient: @unchecked Sendable {
@@ -53,41 +51,20 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
     // MARK: - Send Email
 
-    /// Sends a single email using the default provider (SES).
+    /// Sends a single email using the specified template.
     ///
     /// - Parameters:
     ///   - templateKey: The template key identifying the email template.
     ///   - data: Template data variables to merge into the email.
     ///   - recipient: The recipient email address.
-    /// - Returns: A ``SendEmailResponse`` describing the result.
-    /// - Throws: A ``HuefyError`` on validation or network failures.
-    public func sendEmail(
-        templateKey: String,
-        data: [String: String],
-        recipient: String
-    ) async throws -> SendEmailResponse {
-        return try await sendEmail(
-            templateKey: templateKey,
-            data: data,
-            recipient: recipient,
-            provider: nil
-        )
-    }
-
-    /// Sends a single email using the specified provider.
-    ///
-    /// - Parameters:
-    ///   - templateKey: The template key identifying the email template.
-    ///   - data: Template data variables to merge into the email.
-    ///   - recipient: The recipient email address.
-    ///   - provider: The email provider to use. Pass `nil` for the default (SES).
+    ///   - provider: The email provider to use. Defaults to SES when `nil`.
     /// - Returns: A ``SendEmailResponse`` describing the result.
     /// - Throws: A ``HuefyError`` on validation or network failures.
     public func sendEmail(
         templateKey: String,
         data: [String: String],
         recipient: String,
-        provider: EmailProvider?
+        provider: EmailProvider? = nil
     ) async throws -> SendEmailResponse {
         guard !_closed else {
             throw HuefyError(code: .initFailed, message: "Client has been closed")
@@ -111,8 +88,8 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
         let request = SendEmailRequest(
             templateKey: templateKey.trimmingCharacters(in: .whitespaces),
-            recipient: recipient.trimmingCharacters(in: .whitespaces),
             data: data,
+            recipient: recipient.trimmingCharacters(in: .whitespaces),
             providerType: provider
         )
 
@@ -135,30 +112,24 @@ public final class HuefyEmailClient: @unchecked Sendable {
     /// - Parameters:
     ///   - templateKey: The template key to use for all recipients.
     ///   - recipients: The list of recipients to send to.
-    ///   - options: Optional bulk send options (fromEmail, fromName, providerType, etc.).
+    ///   - provider: The email provider to use. Defaults to SES when `nil`.
     /// - Returns: A ``SendBulkEmailsResponse`` describing the batch result.
     /// - Throws: A ``HuefyError`` on validation or network failures.
     public func sendBulkEmails(
         templateKey: String,
         recipients: [BulkRecipient],
-        options: BulkEmailOptions? = nil
+        provider: EmailProvider? = nil
     ) async throws -> SendBulkEmailsResponse {
         guard !_closed else {
             throw HuefyError(code: .initFailed, message: "Client has been closed")
         }
 
         if let err = EmailValidators.validateBulkCount(recipients.count) {
-            throw HuefyError(
-                code: .validationError,
-                message: err
-            )
+            throw HuefyError(code: .validationError, message: err)
         }
 
         if let err = EmailValidators.validateTemplateKey(templateKey) {
-            throw HuefyError(
-                code: .validationError,
-                message: err
-            )
+            throw HuefyError(code: .validationError, message: err)
         }
 
         for (i, recipient) in recipients.enumerated() {
@@ -173,11 +144,7 @@ public final class HuefyEmailClient: @unchecked Sendable {
         let request = SendBulkEmailsRequest(
             templateKey: templateKey.trimmingCharacters(in: .whitespaces),
             recipients: recipients,
-            fromEmail: options?.fromEmail,
-            fromName: options?.fromName,
-            providerType: options?.providerType,
-            batchSize: options?.batchSize,
-            correlationId: options?.correlationId
+            providerType: provider
         )
 
         let encoder = JSONEncoder()
