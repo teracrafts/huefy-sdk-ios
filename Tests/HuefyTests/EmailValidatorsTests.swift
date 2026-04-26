@@ -68,12 +68,22 @@ final class EmailValidatorsTests: XCTestCase {
         XCTAssertNil(EmailValidators.validateEmailData(["name": "John"]))
     }
 
+    func testValidStructuredDataReturnsNil() {
+        XCTAssertNil(
+            EmailValidators.validateEmailData([
+                "count": 2,
+                "beta": true,
+                "profile": ["plan": "pro"]
+            ])
+        )
+    }
+
     func testNilDataReturnsError() {
-        XCTAssertNotNil(EmailValidators.validateEmailData(nil))
+        XCTAssertNotNil(EmailValidators.validateEmailData(nil as [String: JSONValue]?))
     }
 
     func testEmptyDataReturnsNil() {
-        XCTAssertNil(EmailValidators.validateEmailData([:]))
+        XCTAssertNil(EmailValidators.validateEmailData([:] as [String: JSONValue]))
     }
 
     // MARK: - validateBulkCount
@@ -91,13 +101,13 @@ final class EmailValidatorsTests: XCTestCase {
     }
 
     func testBulkCountOverLimitReturnsError() {
-        let result = EmailValidators.validateBulkCount(101)
+        let result = EmailValidators.validateBulkCount(1001)
         XCTAssertNotNil(result)
         XCTAssertTrue(result!.contains("maximum"))
     }
 
     func testBulkCountAtLimitReturnsNil() {
-        XCTAssertNil(EmailValidators.validateBulkCount(100))
+        XCTAssertNil(EmailValidators.validateBulkCount(1000))
     }
 
     // MARK: - validateSendEmailInput
@@ -114,7 +124,7 @@ final class EmailValidatorsTests: XCTestCase {
     func testInvalidInputReturnsErrors() {
         let errors = EmailValidators.validateSendEmailInput(
             templateKey: "",
-            data: nil,
+            data: nil as [String: JSONValue]?,
             recipient: "bad"
         )
         XCTAssertGreaterThanOrEqual(errors.count, 3)

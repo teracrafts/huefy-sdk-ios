@@ -11,7 +11,7 @@ import Foundation
 /// // Send a single email
 /// let response = try await client.sendEmail(
 ///     templateKey: "welcome",
-///     data: ["name": "John"],
+///     data: ["name": "John", "trialDays": 14, "beta": true],
 ///     recipient: "john@example.com"
 /// )
 ///
@@ -62,7 +62,7 @@ public final class HuefyEmailClient: @unchecked Sendable {
     /// - Throws: A ``HuefyError`` on validation or network failures.
     public func sendEmail(
         templateKey: String,
-        data: [String: String],
+        data: [String: JSONValue],
         recipient: String,
         provider: EmailProvider? = nil
     ) async throws -> SendEmailResponse {
@@ -84,7 +84,10 @@ public final class HuefyEmailClient: @unchecked Sendable {
         }
 
         // Warn if template data contains fields that look like PII
-        Security.warnIfPotentialPII(data as [String: Any], dataType: "email template")
+        Security.warnIfPotentialPII(
+            data.mapValues(\.foundationValue),
+            dataType: "email template"
+        )
 
         let request = SendEmailRequest(
             templateKey: templateKey.trimmingCharacters(in: .whitespaces),
@@ -103,6 +106,20 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
         let decoder = JSONDecoder()
         return try decoder.decode(SendEmailResponse.self, from: responseData)
+    }
+
+    public func sendEmail(
+        templateKey: String,
+        data: [String: String],
+        recipient: String,
+        provider: EmailProvider? = nil
+    ) async throws -> SendEmailResponse {
+        try await sendEmail(
+            templateKey: templateKey,
+            data: data.mapValues(JSONValue.string),
+            recipient: recipient,
+            provider: provider
+        )
     }
 
     // MARK: - Bulk Emails

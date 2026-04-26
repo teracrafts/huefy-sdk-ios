@@ -68,11 +68,15 @@ public enum EmailValidators {
     ///
     /// - Parameter data: The template data dictionary.
     /// - Returns: An error message string, or `nil` if valid.
-    public static func validateEmailData(_ data: [String: String]?) -> String? {
+    public static func validateEmailData(_ data: [String: JSONValue]?) -> String? {
         if data == nil {
             return "template data is required"
         }
         return nil
+    }
+
+    public static func validateEmailData(_ data: [String: String]) -> String? {
+        validateEmailData(data.mapValues(JSONValue.string))
     }
 
     /// Validates the count of emails in a bulk request.
@@ -100,7 +104,7 @@ public enum EmailValidators {
     /// - Returns: An array of error message strings. Empty if all inputs are valid.
     public static func validateSendEmailInput(
         templateKey: String,
-        data: [String: String]?,
+        data: [String: JSONValue]?,
         recipient: String
     ) -> [String] {
         var errors: [String] = []
@@ -116,5 +120,17 @@ public enum EmailValidators {
         }
 
         return errors
+    }
+
+    public static func validateSendEmailInput(
+        templateKey: String,
+        data: [String: String],
+        recipient: String
+    ) -> [String] {
+        validateSendEmailInput(
+            templateKey: templateKey,
+            data: data.mapValues(JSONValue.string),
+            recipient: recipient
+        )
     }
 }

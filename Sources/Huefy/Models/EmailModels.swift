@@ -6,7 +6,7 @@ public struct SendEmailRequest: Codable, Sendable {
     public let templateKey: String
 
     /// Template data variables to merge into the email.
-    public let data: [String: String]
+    public let data: [String: JSONValue]
 
     /// The recipient email address.
     public let recipient: String
@@ -16,7 +16,7 @@ public struct SendEmailRequest: Codable, Sendable {
 
     public init(
         templateKey: String,
-        data: [String: String],
+        data: [String: JSONValue],
         recipient: String,
         providerType: EmailProvider? = nil
     ) {
@@ -26,11 +26,25 @@ public struct SendEmailRequest: Codable, Sendable {
         self.providerType = providerType
     }
 
+    public init(
+        templateKey: String,
+        data: [String: String],
+        recipient: String,
+        providerType: EmailProvider?
+    ) {
+        self.init(
+            templateKey: templateKey,
+            data: data.mapValues(JSONValue.string),
+            recipient: recipient,
+            providerType: providerType
+        )
+    }
+
     enum CodingKeys: String, CodingKey {
-        case templateKey = "template_key"
+        case templateKey
         case data
         case recipient
-        case providerType = "provider_type"
+        case providerType
     }
 }
 
@@ -63,12 +77,16 @@ public struct SendEmailResponse: Codable, Sendable {
 public struct BulkRecipient: Codable, Sendable {
     public let email: String
     public let type: String
-    public let data: [String: String]?
+    public let data: [String: JSONValue]?
 
-    public init(email: String, type: String = "to", data: [String: String]? = nil) {
+    public init(email: String, type: String = "to", data: [String: JSONValue]? = nil) {
         self.email = email
         self.type = type
         self.data = data
+    }
+
+    public init(email: String, type: String = "to", data: [String: String]?) {
+        self.init(email: email, type: type, data: data?.mapValues(JSONValue.string))
     }
 }
 

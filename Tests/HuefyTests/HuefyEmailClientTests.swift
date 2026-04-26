@@ -70,7 +70,7 @@ final class HuefyEmailClientTests: XCTestCase {
         do {
             _ = try await client.sendBulkEmails(
                 templateKey: "welcome",
-                recipients: [BulkRecipient(email: "not-an-email")]
+                recipients: [BulkRecipient(email: "not-an-email", data: nil as [String: JSONValue]?)]
             )
             XCTFail("Expected HuefyError to be thrown")
         } catch let error as HuefyError {
@@ -86,7 +86,7 @@ final class HuefyEmailClientTests: XCTestCase {
         do {
             _ = try await client.sendBulkEmails(
                 templateKey: "welcome",
-                recipients: [BulkRecipient(email: "john@example.com")]
+                recipients: [BulkRecipient(email: "john@example.com", data: nil as [String: JSONValue]?)]
             )
             XCTFail("Expected HuefyError to be thrown")
         } catch let error as HuefyError {
@@ -106,6 +106,35 @@ final class HuefyEmailClientTests: XCTestCase {
         XCTAssertEqual(request.data, ["name": "John"])
         XCTAssertEqual(request.recipient, "john@example.com")
         XCTAssertNil(request.providerType)
+    }
+
+    func testSendEmailRequestEncodesCamelCaseKeysAndJSONValues() throws {
+        let request = SendEmailRequest(
+            templateKey: "welcome",
+            data: [
+                "name": "John",
+                "count": 2,
+                "beta": true
+            ],
+            recipient: "john@example.com",
+            providerType: .sendgrid
+        )
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(request)
+            ) as? [String: Any]
+        )
+
+        XCTAssertEqual(json["templateKey"] as? String, "welcome")
+        XCTAssertEqual(json["providerType"] as? String, "sendgrid")
+        XCTAssertNil(json["template_key"])
+        XCTAssertNil(json["provider_type"])
+
+        let data = try XCTUnwrap(json["data"] as? [String: Any])
+        XCTAssertEqual(data["name"] as? String, "John")
+        XCTAssertEqual(data["count"] as? Int, 2)
+        XCTAssertEqual(data["beta"] as? Bool, true)
     }
 
     func testSendBulkEmailsRequestInit() {
