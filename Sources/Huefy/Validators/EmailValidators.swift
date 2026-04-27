@@ -16,6 +16,7 @@ public enum EmailValidators {
 
     /// Maximum number of emails in a single bulk request.
     public static let maxBulkEmails = 1000
+    private static let validRecipientTypes = Set(["to", "cc", "bcc"])
 
     // MARK: - Individual Validators
 
@@ -122,10 +123,57 @@ public enum EmailValidators {
         return errors
     }
 
+    public static func validateRecipient(_ recipient: SendEmailRecipient?) -> String? {
+        guard let recipient else {
+            return "recipient email is required"
+        }
+        if let emailError = validateEmail(recipient.email) {
+            return emailError
+        }
+        if let recipientType = recipient.type?.trimmingCharacters(in: .whitespaces).lowercased(),
+           !recipientType.isEmpty,
+           !validRecipientTypes.contains(recipientType) {
+            return "recipient type must be one of: to, cc, bcc"
+        }
+        return nil
+    }
+
+    public static func validateSendEmailInput(
+        templateKey: String,
+        data: [String: JSONValue]?,
+        recipient: SendEmailRecipient
+    ) -> [String] {
+        var errors: [String] = []
+
+        if let err = validateTemplateKey(templateKey) {
+            errors.append(err)
+        }
+        if let err = validateEmailData(data) {
+            errors.append(err)
+        }
+        if let err = validateRecipient(recipient) {
+            errors.append(err)
+        }
+
+        return errors
+    }
+
     public static func validateSendEmailInput(
         templateKey: String,
         data: [String: String],
         recipient: String
+    ) -> [String] {
+        validateSendEmailInput(
+            templateKey: templateKey,
+            data: data.mapValues(JSONValue.string),
+            recipient: recipient
+        )
+    }
+
+    public static func validateSendEmailInput(
+        templateKey: String,
+        data: [String: String],
+        recipient: SendEmailRecipient
     ) -> [String] {
         validateSendEmailInput(
             templateKey: templateKey,

@@ -39,13 +39,13 @@ import Huefy
 
 let client = try HuefyEmailClient(config: HuefyConfig(apiKey: "sdk_your_api_key"))
 
-let response = try await client.sendEmail(HuefySendEmailRequest(
+let response = try await client.sendEmail(
     templateKey: "welcome-email",
-    recipient: HuefyRecipient(email: "alice@example.com", name: "Alice"),
-    variables: ["firstName": "Alice", "trialDays": 14]
-))
+    data: ["firstName": "Alice", "trialDays": 14],
+    recipient: "alice@example.com"
+)
 
-print("Message ID:", response.messageId)
+print("Message ID:", response.data.emailId)
 client.close()
 ```
 
@@ -66,7 +66,7 @@ client.close()
 | Parameter | Default | Description |
 |-----------|---------|-------------|
 | `apiKey` | — | **Required.** Must have prefix `sdk_`, `srv_`, or `cli_` |
-| `baseURL` | `https://api.huefy.dev/api/v1/sdk` | Override the API base URL |
+| `baseUrl` | `https://api.huefy.dev/api/v1/sdk` | Override the API base URL |
 | `timeout` | `30.0` | Request timeout in seconds |
 | `retryConfig.maxAttempts` | `3` | Total attempts including the first |
 | `retryConfig.baseDelay` | `0.5` | Exponential backoff base delay (seconds) |
@@ -81,14 +81,15 @@ client.close()
 ## Bulk Email
 
 ```swift
-let bulk = try await client.sendBulkEmails(HuefyBulkEmailRequest(
-    emails: [
-        HuefySendEmailRequest(templateKey: "promo", recipient: HuefyRecipient(email: "bob@example.com")),
-        HuefySendEmailRequest(templateKey: "promo", recipient: HuefyRecipient(email: "carol@example.com")),
+let bulk = try await client.sendBulkEmails(
+    templateKey: "promo",
+    recipients: [
+        BulkRecipient(email: "bob@example.com"),
+        BulkRecipient(email: "carol@example.com"),
     ]
-))
+)
 
-print("Sent: \(bulk.totalSent), Failed: \(bulk.totalFailed)")
+print("Sent: \(bulk.data.successCount), Failed: \(bulk.data.failureCount)")
 ```
 
 ## Error Handling
@@ -98,15 +99,18 @@ import Huefy
 
 do {
     let response = try await client.sendEmail(request)
-    print("Delivered:", response.messageId)
-} catch let error as HuefyAuthError {
-    print("Invalid API key")
-} catch let error as HuefyRateLimitError {
-    print("Rate limited. Retry after \(error.retryAfter)s")
-} catch let error as HuefyCircuitOpenError {
-    print("Circuit open — service unavailable, backing off")
+    print("Delivered:", response.data.emailId)
 } catch let error as HuefyError {
-    print("Huefy error [\(error.code)]: \(error.localizedDescription)")
+    switch error.code {
+    case .authInvalidKey, .authMissingKey, .authUnauthorized:
+        print("Invalid API key")
+    case .networkRetryLimit:
+        print("Rate limited. Retry after \(Int(error.retryAfter ?? 0))s")
+    case .circuitOpen:
+        print("Circuit open — service unavailable, backing off")
+    default:
+        print("Huefy error [\(error.code.rawValue)]: \(error.message)")
+    }
 }
 ```
 
@@ -114,30 +118,28 @@ do {
 
 | Type | Code | Meaning |
 |------|------|---------|
-| `HuefyInitError` | 1001 | Client failed to initialise |
-| `HuefyAuthError` | 1102 | API key rejected |
-| `HuefyNetworkError` | 1201 | Upstream request failed |
-| `HuefyCircuitOpenError` | 1301 | Circuit breaker tripped |
-| `HuefyRateLimitError` | 2003 | Rate limit exceeded |
-| `HuefyTemplateMissingError` | 2005 | Template key not found |
+| `HuefyError` | `ErrorCode.authInvalidKey` / `authMissingKey` / `authUnauthorized` | API key rejected |
+| `HuefyError` | `ErrorCode.networkRetryLimit` | Rate limit exceeded |
+| `HuefyError` | `ErrorCode.circuitOpen` | Circuit breaker tripped |
+| `HuefyError` | `ErrorCode.*` | Transport, validation, or configuration failure |
 
 ## Health Check
 
 ```swift
 let health = try await client.healthCheck()
-if health.status != "healthy" {
-    print("Huefy degraded:", health.status)
+if health.data.status != "healthy" {
+    print("Huefy degraded:", health.data.status)
 }
 ```
 
 ## Local Development
 
-Set `HUEFY_MODE=local` in your environment, or override `baseURL` in config:
+Set `HUEFY_MODE=local` to target `https://api.huefy.on/api/v1/sdk`, or override `baseUrl` in config. To bypass Caddy and hit the raw app port directly, set `http://localhost:8080/api/v1/sdk` explicitly:
 
 ```swift
 let client = try HuefyEmailClient(config: HuefyConfig(
     apiKey: "sdk_local_key",
-    baseURL: URL(string: "http://localhost:3000/api/v1/sdk")!
+    baseUrl: "https://api.huefy.on/api/v1/sdk"
 ))
 ```
 

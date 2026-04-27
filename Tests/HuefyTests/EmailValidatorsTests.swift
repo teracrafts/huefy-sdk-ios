@@ -138,4 +138,35 @@ final class EmailValidatorsTests: XCTestCase {
         )
         XCTAssertEqual(errors.count, 1)
     }
+
+    func testRecipientObjectInputReturnsNoErrors() {
+        let errors = EmailValidators.validateSendEmailInput(
+            templateKey: "welcome",
+            data: ["name": "John"],
+            recipient: SendEmailRecipient(
+                email: "user@example.com",
+                type: "cc",
+                data: ["segment": "vip"]
+            )
+        )
+        XCTAssertTrue(errors.isEmpty)
+    }
+
+    func testInvalidRecipientObjectReturnsError() {
+        let errors = EmailValidators.validateSendEmailInput(
+            templateKey: "welcome",
+            data: ["name": "John"],
+            recipient: SendEmailRecipient(email: "bad", type: "cc")
+        )
+        XCTAssertEqual(errors.count, 1)
+    }
+
+    func testInvalidRecipientObjectTypeReturnsError() {
+        let errors = EmailValidators.validateSendEmailInput(
+            templateKey: "welcome",
+            data: ["name": "John"],
+            recipient: SendEmailRecipient(email: "user@example.com", type: "weird")
+        )
+        XCTAssertEqual(errors, ["recipient type must be one of: to, cc, bcc"])
+    }
 }

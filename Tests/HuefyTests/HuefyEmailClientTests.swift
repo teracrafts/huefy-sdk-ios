@@ -105,6 +105,7 @@ final class HuefyEmailClientTests: XCTestCase {
         XCTAssertEqual(request.templateKey, "welcome")
         XCTAssertEqual(request.data, ["name": "John"])
         XCTAssertEqual(request.recipient, "john@example.com")
+        XCTAssertNil(request.recipientObject)
         XCTAssertNil(request.providerType)
     }
 
@@ -135,6 +136,30 @@ final class HuefyEmailClientTests: XCTestCase {
         XCTAssertEqual(data["name"] as? String, "John")
         XCTAssertEqual(data["count"] as? Int, 2)
         XCTAssertEqual(data["beta"] as? Bool, true)
+    }
+
+    func testSendEmailRequestEncodesRecipientObject() throws {
+        let request = SendEmailRequest(
+            templateKey: "welcome",
+            data: ["name": "John"],
+            recipient: SendEmailRecipient(
+                email: "john@example.com",
+                type: "cc",
+                data: ["segment": "vip"]
+            ),
+            providerType: .ses
+        )
+
+        let json = try XCTUnwrap(
+            JSONSerialization.jsonObject(
+                with: JSONEncoder().encode(request)
+            ) as? [String: Any]
+        )
+
+        let recipient = try XCTUnwrap(json["recipient"] as? [String: Any])
+        XCTAssertEqual(recipient["email"] as? String, "john@example.com")
+        XCTAssertEqual(recipient["type"] as? String, "cc")
+        XCTAssertEqual((recipient["data"] as? [String: Any])?["segment"] as? String, "vip")
     }
 
     func testSendBulkEmailsRequestInit() {

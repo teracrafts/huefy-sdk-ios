@@ -110,8 +110,79 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
     public func sendEmail(
         templateKey: String,
+        data: [String: JSONValue],
+        recipient: SendEmailRecipient,
+        provider: EmailProvider? = nil
+    ) async throws -> SendEmailResponse {
+        guard !_closed else {
+            throw HuefyError(code: .initFailed, message: "Client has been closed")
+        }
+
+        let errors = EmailValidators.validateSendEmailInput(
+            templateKey: templateKey,
+            data: data,
+            recipient: recipient
+        )
+
+        if !errors.isEmpty {
+            throw HuefyError(
+                code: .validationError,
+                message: "Validation failed: \(errors.joined(separator: "; "))"
+            )
+        }
+
+        Security.warnIfPotentialPII(
+            data.mapValues(\.foundationValue),
+            dataType: "email template"
+        )
+        if let recipientData = recipient.data {
+            Security.warnIfPotentialPII(
+                recipientData.mapValues(\.foundationValue),
+                dataType: "recipient template"
+            )
+        }
+
+        let request = SendEmailRequest(
+            templateKey: templateKey.trimmingCharacters(in: .whitespaces),
+            data: data,
+            recipient: SendEmailRecipient(
+                email: recipient.email.trimmingCharacters(in: .whitespaces),
+                type: recipient.type?.trimmingCharacters(in: .whitespaces).lowercased(),
+                data: recipient.data
+            ),
+            providerType: provider
+        )
+
+        let encoder = JSONEncoder()
+        let body = try encoder.encode(request)
+        let responseData = try await httpClient.request(
+            method: "POST",
+            path: Self.emailsSendPath,
+            body: body
+        )
+
+        let decoder = JSONDecoder()
+        return try decoder.decode(SendEmailResponse.self, from: responseData)
+    }
+
+    public func sendEmail(
+        templateKey: String,
         data: [String: String],
         recipient: String,
+        provider: EmailProvider? = nil
+    ) async throws -> SendEmailResponse {
+        try await sendEmail(
+            templateKey: templateKey,
+            data: data.mapValues(JSONValue.string),
+            recipient: recipient,
+            provider: provider
+        )
+    }
+
+    public func sendEmail(
+        templateKey: String,
+        data: [String: String],
+        recipient: SendEmailRecipient,
         provider: EmailProvider? = nil
     ) async throws -> SendEmailResponse {
         try await sendEmail(

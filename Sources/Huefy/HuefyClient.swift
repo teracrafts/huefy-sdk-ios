@@ -8,7 +8,7 @@ import Foundation
 /// ```swift
 /// let client = HuefyClient(config: HuefyConfig(apiKey: "your-api-key"))
 /// let health = try await client.healthCheck()
-/// print(health.status)
+/// print(health.data.status)
 /// client.close()
 /// ```
 public final class HuefyClient: @unchecked Sendable {

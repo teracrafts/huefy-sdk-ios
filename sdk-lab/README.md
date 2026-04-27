@@ -10,7 +10,7 @@ A smoke-test harness that exercises the core subsystems of the Huefy Swift SDK w
 4. **Error sanitization** — sanitize `"Error at 192.168.1.1 for user@example.com"` and verify the IP and email are redacted
 5. **PII detection** — detect PII fields (`email`, `ssn`) in a dictionary
 6. **Circuit breaker state** — a new `CircuitBreaker()` must start in the `CLOSED` state
-7. **Health check** — call `healthCheck()`; network/auth errors are accepted
+7. **Health check** — call `healthCheck()` against the configured base URL
 8. **Cleanup** — call `client.close()`
 
 ## Running

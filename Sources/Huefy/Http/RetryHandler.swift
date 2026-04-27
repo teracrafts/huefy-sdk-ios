@@ -95,6 +95,6 @@ struct RetryHandler: Sendable {
 
         // Apply +/-20% jitter: factor in [0.8, 1.2)
         let jitterFactor = 0.8 + Double.random(in: 0..<0.4)
-        return capped * jitterFactor
+        return min(capped * jitterFactor, config.maxDelay)
     }
 }
