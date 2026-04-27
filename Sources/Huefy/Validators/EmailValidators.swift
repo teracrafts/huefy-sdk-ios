@@ -138,6 +138,20 @@ public enum EmailValidators {
         return nil
     }
 
+    public static func validateBulkRecipient(_ recipient: BulkRecipient?) -> String? {
+        guard let recipient else {
+            return "recipient email is required"
+        }
+        if let emailError = validateEmail(recipient.email) {
+            return emailError
+        }
+        let recipientType = recipient.type.trimmingCharacters(in: .whitespaces).lowercased()
+        if !recipientType.isEmpty && !validRecipientTypes.contains(recipientType) {
+            return "recipient type must be one of: to, cc, bcc"
+        }
+        return nil
+    }
+
     public static func validateSendEmailInput(
         templateKey: String,
         data: [String: JSONValue]?,

@@ -221,7 +221,7 @@ public final class HuefyEmailClient: @unchecked Sendable {
         }
 
         for (i, recipient) in recipients.enumerated() {
-            if let err = EmailValidators.validateEmail(recipient.email) {
+            if let err = EmailValidators.validateBulkRecipient(recipient) {
                 throw HuefyError(
                     code: .validationError,
                     message: "recipients[\(i)]: \(err)"
@@ -231,7 +231,13 @@ public final class HuefyEmailClient: @unchecked Sendable {
 
         let request = SendBulkEmailsRequest(
             templateKey: templateKey.trimmingCharacters(in: .whitespaces),
-            recipients: recipients,
+            recipients: recipients.map {
+                BulkRecipient(
+                    email: $0.email.trimmingCharacters(in: .whitespaces),
+                    type: $0.type.trimmingCharacters(in: .whitespaces).lowercased(),
+                    data: $0.data
+                )
+            },
             providerType: provider
         )
 

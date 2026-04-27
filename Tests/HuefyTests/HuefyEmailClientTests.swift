@@ -79,6 +79,21 @@ final class HuefyEmailClientTests: XCTestCase {
         }
     }
 
+    func testSendBulkEmailsThrowsOnInvalidRecipientType() async throws {
+        let client = try HuefyEmailClient(config: HuefyConfig(apiKey: "sdk_test_key"))
+
+        do {
+            _ = try await client.sendBulkEmails(
+                templateKey: "welcome",
+                recipients: [BulkRecipient(email: "john@example.com", type: "reply-to", data: nil as [String: JSONValue]?)]
+            )
+            XCTFail("Expected HuefyError to be thrown")
+        } catch let error as HuefyError {
+            XCTAssertEqual(error.code, .validationError)
+            XCTAssertTrue(error.message.contains("recipients[0]"))
+        }
+    }
+
     func testSendBulkEmailsThrowsWhenClosed() async throws {
         let client = try HuefyEmailClient(config: HuefyConfig(apiKey: "sdk_test_key"))
         client.close()
