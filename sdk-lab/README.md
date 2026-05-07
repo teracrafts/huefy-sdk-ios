@@ -1,51 +1,26 @@
 # Huefy Swift SDK Lab
 
-A smoke-test harness that exercises the core subsystems of the Huefy Swift SDK without requiring a live API key.
+Verifies the core email contract through the real Swift email client against a local loopback stub server.
 
-## What it checks
-
-1. **Initialization** — `HuefyClient(config: HuefyConfig(apiKey: "sdk_lab_test_key"))`
-2. **Config validation** — `HuefyConfig(apiKey: "")` must throw
-3. **HMAC signing** — sign a payload and verify the signature is a 64-char hex string
-4. **Error sanitization** — sanitize `"Error at 192.168.1.1 for user@example.com"` and verify the IP and email are redacted
-5. **PII detection** — detect PII fields (`email`, `ssn`) in a dictionary
-6. **Circuit breaker state** — a new `CircuitBreaker()` must start in the `CLOSED` state
-7. **Health check** — call `healthCheck()` against the configured base URL
-8. **Cleanup** — call `client.close()`
-
-## Running
-
-The lab is an executable target (`SdkLab`) defined in `Package.swift`. The source lives at `Sources/SdkLab/main.swift`.
+## Run
 
 ```bash
-# From the swift SDK directory
-cd sdks/swift
 swift run SdkLab
 ```
 
-Or from the repo root using the Taskfile:
+from `sdks/swift/`.
 
-```bash
-task lab-swift
-```
+## Scenarios
 
-## Expected output
+1. Initialization
+2. Single-send contract shaping
+3. Bulk-send contract shaping
+4. Invalid single rejection
+5. Invalid bulk rejection
+6. Health request path behavior
+7. Cleanup
 
-```
-=== Huefy Swift SDK Lab ===
+## Notes
 
-[PASS] Initialization
-[PASS] Config validation
-[PASS] HMAC signing
-[PASS] Error sanitization
-[PASS] PII detection
-[PASS] Circuit breaker state
-[PASS] Health check
-[PASS] Cleanup
-
-========================================
-Results: 8 passed, 0 failed
-========================================
-
-All verifications passed!
-```
+- The lab uses a real loopback TCP stub because the SDK owns its own `URLSession`.
+- It verifies the actual email-client methods, not generic helper utilities.
