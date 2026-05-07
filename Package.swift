@@ -22,8 +22,8 @@ let package = Package(
         .executableTarget(
             name: "SdkLab",
             dependencies: ["Huefy"],
-            exclude: ["README.md"],
-            path: "Sources/SdkLab"
+            path: "Sources/SdkLab",
+            exclude: ["README.md"]
         ),
         .testTarget(
             name: "HuefyTests",
