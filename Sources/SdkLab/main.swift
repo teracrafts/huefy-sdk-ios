@@ -19,6 +19,31 @@ func fail(_ label: String, _ reason: String) {
     print("\(red)[FAIL]\(reset) \(label) - \(reason)")
 }
 
+func isLiveMode() -> Bool {
+    ProcessInfo.processInfo.environment["HUEFY_SDK_LAB_MODE"]?.lowercased() == "live"
+}
+
+func requireEnv(_ name: String) throws -> String {
+    guard let value = ProcessInfo.processInfo.environment[name]?.trimmingCharacters(in: .whitespacesAndNewlines),
+          !value.isEmpty else {
+        throw NSError(domain: "SdkLab", code: 1, userInfo: [NSLocalizedDescriptionKey: "\(name) is required in live mode"])
+    }
+    return value
+}
+
+func resolveLiveProvider() -> EmailProvider? {
+    switch ProcessInfo.processInfo.environment["HUEFY_SDK_LIVE_PROVIDER"]?.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() {
+    case "sendgrid":
+        return .sendgrid
+    case "ses":
+        return .ses
+    case "mailgun":
+        return .mailgun
+    default:
+        return nil
+    }
+}
+
 final class LocalStubServer {
     struct CapturedRequest {
         let path: String
@@ -189,8 +214,12 @@ final class LocalStubServer {
 }
 
 func buildClient(baseURL: String) throws -> HuefyEmailClient {
+    try buildClient(baseURL: baseURL, apiKey: "sdk_lab_test_key_xxxxxxxxxxxx")
+}
+
+func buildClient(baseURL: String, apiKey: String) throws -> HuefyEmailClient {
     try HuefyEmailClient(config: HuefyConfig(
-        apiKey: "sdk_lab_test_key_xxxxxxxxxxxx",
+        apiKey: apiKey,
         baseUrl: baseURL,
         timeout: 2.0,
         retryConfig: RetryConfig(maxRetries: 0, baseDelay: 0.05, maxDelay: 0.05)
@@ -380,18 +409,88 @@ let semaphore = DispatchSemaphore(value: 0)
 
 Task {
     do {
-        let server = try LocalStubServer()
-        try await server.start()
-        defer { server.stop() }
+        if isLiveMode() {
+            let client = try buildClient(
+                baseURL: requireEnv("HUEFY_SDK_LIVE_BASE_URL"),
+                apiKey: requireEnv("HUEFY_SDK_LIVE_API_KEY")
+            )
+            let recipient = try requireEnv("HUEFY_SDK_LIVE_RECIPIENT")
+            let templateKey = try requireEnv("HUEFY_SDK_LIVE_TEMPLATE_KEY")
+            let provider = resolveLiveProvider()
 
-        let client = try buildClient(baseURL: server.baseURL)
-        pass("Initialization")
-        await verifySingleSend(client, server: server)
-        await verifyBulkSend(client, server: server)
-        await verifyInvalidSingle(client, server: server)
-        await verifyInvalidBulk(client, server: server)
-        await verifyHealth(client, server: server)
-        await verifyCleanup(client)
+            pass("Initialization")
+
+            do {
+                let response = try await client.sendEmail(
+                    templateKey: templateKey,
+                    data: ["FirstName": "SDK Live"],
+                    recipient: recipient,
+                    provider: provider
+                )
+                response.success ? pass("Single-send live behavior") : fail("Single-send live behavior", "expected successful live send")
+            } catch {
+                fail("Single-send live behavior", "\(error)")
+            }
+
+            do {
+                let response = try await client.sendBulkEmails(
+                    templateKey: templateKey,
+                    recipients: [BulkRecipient(email: recipient, type: "TO", data: [String: String]())],
+                    provider: provider
+                )
+                response.success && response.data.totalRecipients >= 1
+                    ? pass("Bulk-send live behavior")
+                    : fail("Bulk-send live behavior", "expected successful live bulk send")
+            } catch {
+                fail("Bulk-send live behavior", "\(error)")
+            }
+
+            do {
+                _ = try await client.sendEmail(
+                    templateKey: templateKey,
+                    data: [String: String](),
+                    recipient: "bad-email"
+                )
+                fail("Invalid single rejection", "expected validation failure")
+            } catch {
+                pass("Invalid single rejection")
+            }
+
+            do {
+                _ = try await client.sendBulkEmails(
+                    templateKey: templateKey,
+                    recipients: [BulkRecipient(email: "bad-email", type: "reply-to", data: [String: String]())]
+                )
+                fail("Invalid bulk rejection", "expected validation failure")
+            } catch {
+                pass("Invalid bulk rejection")
+            }
+
+            do {
+                let response = try await client.healthCheck()
+                response.data.status == "healthy"
+                    ? pass("Health request path behavior")
+                    : fail("Health request path behavior", "expected healthy live response")
+            } catch {
+                fail("Health request path behavior", "\(error)")
+            }
+
+            client.close()
+            pass("Cleanup")
+        } else {
+            let server = try LocalStubServer()
+            try await server.start()
+            defer { server.stop() }
+
+            let client = try buildClient(baseURL: server.baseURL)
+            pass("Initialization")
+            await verifySingleSend(client, server: server)
+            await verifyBulkSend(client, server: server)
+            await verifyInvalidSingle(client, server: server)
+            await verifyInvalidBulk(client, server: server)
+            await verifyHealth(client, server: server)
+            await verifyCleanup(client)
+        }
     } catch {
         fail("Initialization", "\(error)")
     }
